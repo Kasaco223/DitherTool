@@ -11,7 +11,8 @@ const ControlPanel = ({
   useCustomColors,
   onUseCustomColorsToggle,
   customNeonColors,
-  setCustomNeonColor
+  setCustomNeonColor,
+  setShowExportPopup
 }) => {
   const fileInputRef = useRef(null)
 
@@ -56,11 +57,15 @@ const ControlPanel = ({
           Import Image
         </button>
         <button
-          onClick={onExport}
+          onClick={() => setShowExportPopup(true)}
           disabled={!hasImage}
-          className="w-full px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm uppercase tracking-wider border border-black hover:bg-black hover:text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+          className={`w-full px-4 py-2 text-sm font-medium text-white rounded ${
+            hasImage
+              ? 'bg-black hover:bg-gray-800'
+              : 'bg-gray-300 cursor-not-allowed'
+          } transition-colors`}
         >
-          Export Image
+          Export
         </button>
       </div>
 

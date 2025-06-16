@@ -7,6 +7,7 @@ function App() {
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 })
   const [zoom, setZoom] = useState(1)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [showExportPopup, setShowExportPopup] = useState(false)
   const [settings, setSettings] = useState({
     scale: 1,
     smoothness: 5,
@@ -82,7 +83,7 @@ function App() {
     setZoom(1)
   }, [])
 
-  const handleExport = useCallback(() => {
+  const handleExport = useCallback((format) => {
     const canvas = canvasRef.current
     if (!canvas) {
       console.warn('Canvas no disponible')
@@ -104,10 +105,33 @@ function App() {
         return
       }
 
-      const link = document.createElement('a')
-      link.download = 'dithered-image.png'
-      link.href = canvas.toDataURL('image/png')
-      link.click()
+      // Si es JPG, rellenamos los espacios transparentes con negro
+      if (format === 'jpg') {
+        const tempCanvas = document.createElement('canvas')
+        const tempCtx = tempCanvas.getContext('2d')
+        tempCanvas.width = canvas.width
+        tempCanvas.height = canvas.height
+        
+        // Rellenar con negro
+        tempCtx.fillStyle = 'black'
+        tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height)
+        
+        // Dibujar la imagen original encima
+        tempCtx.drawImage(canvas, 0, 0)
+        
+        const link = document.createElement('a')
+        link.download = 'dithered-image.jpg'
+        link.href = tempCanvas.toDataURL('image/jpeg', 1.0)
+        link.click()
+      } else {
+        // PNG mantiene la transparencia
+        const link = document.createElement('a')
+        link.download = 'dithered-image.png'
+        link.href = canvas.toDataURL('image/png')
+        link.click()
+      }
+      
+      setShowExportPopup(false)
     } catch (err) {
       console.error('Error exportando imagen:', err)
     }
@@ -120,81 +144,54 @@ function App() {
   return (
     <div className="flex flex-col min-h-screen text-black bg-white md:flex-row">
       {/* Unified Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 fixed top-0 w-full bg-white z-50">
+      <div className="fixed top-0 z-50 flex items-center justify-between w-full p-4 bg-white border-b border-gray-200">
         <h1 className="text-xl font-medium tracking-tight">Dither Tool</h1>
 
         {/* Controls for Mobile */}
         <div className="flex items-center space-x-3 md:hidden">
           <button
             onClick={handleZoomOut}
-            className="px-2 py-1 text-xs uppercase tracking-wider border border-black hover:bg-black hover:text-white transition-all duration-300"
+            className="px-2 py-1 text-xs tracking-wider uppercase transition-all duration-300 border border-black hover:bg-black hover:text-white"
           >
             Zoom Out
           </button>
-          <span className="text-xs font-medium uppercase tracking-wider">
+          <span className="text-xs font-medium tracking-wider uppercase">
             {Math.round(zoom * 100)}%
           </span>
           <button
             onClick={handleZoomIn}
-            className="px-2 py-1 text-xs uppercase tracking-wider border border-black hover:bg-black hover:text-white transition-all duration-300"
+            className="px-2 py-1 text-xs tracking-wider uppercase transition-all duration-300 border border-black hover:bg-black hover:text-white"
           >
             Zoom In
           </button>
           <button
             onClick={handleResetZoom}
-            className="px-2 py-1 text-xs uppercase tracking-wider border border-black hover:bg-black hover:text-white transition-all duration-300"
+            className="px-2 py-1 text-xs tracking-wider uppercase transition-all duration-300 border border-black hover:bg-black hover:text-white"
           >
             Reset
-          </button>
-          <button
-            onClick={toggleMobileMenu}
-            className="px-2 py-1 text-xs uppercase tracking-wider border border-black text-black hover:bg-gray-100 transition-all duration-300"
-          >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              {isMobileMenuOpen ? (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              ) : (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              )}
-            </svg>
           </button>
         </div>
 
         {/* Controls for Desktop */}
-        <div className="hidden md:flex items-center space-x-3">
+        <div className="items-center hidden space-x-3 md:flex">
             <button
               onClick={handleZoomOut}
-              className="px-2 py-1 text-xs uppercase tracking-wider border border-black hover:bg-black hover:text-white transition-all duration-300"
+              className="px-2 py-1 text-xs tracking-wider uppercase transition-all duration-300 border border-black hover:bg-black hover:text-white"
             >
               Zoom Out
             </button>
-            <span className="text-xs font-medium uppercase tracking-wider">
+            <span className="text-xs font-medium tracking-wider uppercase">
               {Math.round(zoom * 100)}%
             </span>
             <button
               onClick={handleZoomIn}
-              className="px-2 py-1 text-xs uppercase tracking-wider border border-black hover:bg-black hover:text-white transition-all duration-300"
+              className="px-2 py-1 text-xs tracking-wider uppercase transition-all duration-300 border border-black hover:bg-black hover:text-white"
             >
               Zoom In
             </button>
             <button
               onClick={handleResetZoom}
-              className="px-2 py-1 text-xs uppercase tracking-wider border border-black hover:bg-black hover:text-white transition-all duration-300"
+              className="px-2 py-1 text-xs tracking-wider uppercase transition-all duration-300 border border-black hover:bg-black hover:text-white"
             >
               Reset
             </button>
@@ -208,7 +205,7 @@ function App() {
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
       `} style={{ top: '64px' }}> {/* Offset by mobile header height */}
         {/* Header */}
-        <header className="px-8 py-6 border-b border-gray-200 sticky top-0 bg-white z-10">
+        <header className="sticky top-0 z-10 px-8 py-6 bg-white border-b border-gray-200">
           <h1 className="text-2xl font-medium tracking-tight">Dither Tool</h1>
           <div className="mt-2 text-sm text-gray-500">
             {image ? `${canvasSize.width} × ${canvasSize.height}` : 'No image loaded'}
@@ -227,12 +224,13 @@ function App() {
             onUseCustomColorsToggle={handleUseCustomColorsToggle}
             customNeonColors={customNeonColors}
             setCustomNeonColor={setCustomNeonColor}
+            setShowExportPopup={setShowExportPopup}
           />
         </div>
       </div>
 
       {/* Main Canvas Area */}
-      <div ref={canvasContainerRef} className="flex-1 p-4 md:p-8 pt-20"> {/* Adjusted padding-top */}
+      <div ref={canvasContainerRef} className="flex-1 p-4 pt-20 md:p-8"> {/* Adjusted padding-top */}
         <CanvasPreview
           ref={canvasRef}
           image={image}
@@ -246,6 +244,35 @@ function App() {
           customNeonColors={customNeonColors}
         />
       </div>
+
+      {/* Export Popup */}
+      {showExportPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="relative w-full max-w-xs p-6 mx-auto bg-white rounded-lg shadow-xl sm:max-w-sm">
+            <h3 className="mb-4 text-lg font-medium text-center">Select the export format</h3>
+            <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3">
+              <button
+                onClick={() => handleExport('png')}
+                className="flex-1 px-4 py-2 text-white transition-colors bg-black rounded hover:bg-gray-800"
+              >
+                PNG
+              </button>
+              <button
+                onClick={() => handleExport('jpg')}
+                className="flex-1 px-4 py-2 text-white transition-colors bg-black rounded hover:bg-gray-800"
+              >
+                JPG
+              </button>
+            </div>
+            <button
+              onClick={() => setShowExportPopup(false)}
+              className="w-full px-4 py-2 mt-4 text-gray-800 transition-colors bg-gray-200 rounded hover:bg-gray-300"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
