@@ -119,10 +119,12 @@ function App() {
 
   return (
     <div className="flex flex-col min-h-screen text-black bg-white md:flex-row">
-      {/* Mobile Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 md:hidden fixed top-0 w-full bg-white z-50">
+      {/* Unified Header */}
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 fixed top-0 w-full bg-white z-50">
         <h1 className="text-xl font-medium tracking-tight">Dither Tool</h1>
-        <div className="flex items-center space-x-2">
+
+        {/* Controls for Mobile */}
+        <div className="flex items-center space-x-3 md:hidden">
           <button
             onClick={handleZoomOut}
             className="px-2 py-1 text-xs uppercase tracking-wider border border-black hover:bg-black hover:text-white transition-all duration-300"
@@ -144,42 +146,67 @@ function App() {
           >
             Reset
           </button>
-        </div>
-        <button
-          onClick={toggleMobileMenu}
-          className="p-2 text-black hover:bg-gray-100"
-        >
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+          <button
+            onClick={toggleMobileMenu}
+            className="px-2 py-1 text-xs uppercase tracking-wider border border-black text-black hover:bg-gray-100 transition-all duration-300"
           >
-            {isMobileMenuOpen ? (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            ) : (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            )}
-          </svg>
-        </button>
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              {isMobileMenuOpen ? (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              ) : (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              )}
+            </svg>
+          </button>
+        </div>
+
+        {/* Controls for Desktop */}
+        <div className="hidden md:flex items-center space-x-3">
+            <button
+              onClick={handleZoomOut}
+              className="px-2 py-1 text-xs uppercase tracking-wider border border-black hover:bg-black hover:text-white transition-all duration-300"
+            >
+              Zoom Out
+            </button>
+            <span className="text-xs font-medium uppercase tracking-wider">
+              {Math.round(zoom * 100)}%
+            </span>
+            <button
+              onClick={handleZoomIn}
+              className="px-2 py-1 text-xs uppercase tracking-wider border border-black hover:bg-black hover:text-white transition-all duration-300"
+            >
+              Zoom In
+            </button>
+            <button
+              onClick={handleResetZoom}
+              className="px-2 py-1 text-xs uppercase tracking-wider border border-black hover:bg-black hover:text-white transition-all duration-300"
+            >
+              Reset
+            </button>
+        </div>
       </div>
 
       {/* Side Menu - Controls */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 w-80 bg-white transform transition-transform duration-300 ease-in-out overflow-y-auto
-        md:relative md:translate-x-0
+        fixed inset-y-0 left-0 z-40 w-80 bg-white transform transition-transform duration-300 ease-in-out overflow-y-auto
+        md:relative md:translate-x-0 md:flex-shrink-0
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
-      `} style={{ top: '56px' }}> {/* Offset by mobile header height */}
+      `} style={{ top: '64px' }}> {/* Offset by mobile header height */}
         {/* Header */}
         <header className="px-8 py-6 border-b border-gray-200 sticky top-0 bg-white z-10">
           <h1 className="text-2xl font-medium tracking-tight">Dither Tool</h1>
@@ -205,7 +232,7 @@ function App() {
       </div>
 
       {/* Main Canvas Area */}
-      <div ref={canvasContainerRef} className="flex-1 p-4 md:p-8 pt-20 md:pt-8"> {/* Adjust padding-top for fixed header */}
+      <div ref={canvasContainerRef} className="flex-1 p-4 md:p-8 pt-20"> {/* Adjusted padding-top */}
         <CanvasPreview
           ref={canvasRef}
           image={image}
@@ -219,14 +246,6 @@ function App() {
           customNeonColors={customNeonColors}
         />
       </div>
-
-      {/* Mobile Menu Overlay */}
-      {isMobileMenuOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black bg-opacity-50 md:hidden"
-          onClick={toggleMobileMenu}
-        />
-      )}
     </div>
   )
 }

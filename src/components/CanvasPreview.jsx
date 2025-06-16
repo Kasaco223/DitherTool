@@ -194,7 +194,6 @@ const CanvasPreview = forwardRef(({
         {image ? (
           <canvas
             ref={canvasRef}
-            className="max-w-none"
             style={{
               transform: `scale(${zoom})`,
               transformOrigin: 'center',
