@@ -149,34 +149,10 @@ function App() {
 
         {/* Controls for Mobile */}
         <div className="flex items-center space-x-3 md:hidden">
-          <button
-            onClick={handleZoomOut}
-            className="px-2 py-1 text-xs tracking-wider uppercase transition-all duration-300 border border-black hover:bg-black hover:text-white"
-          >
-            Zoom Out
-          </button>
-          <span className="text-xs font-medium tracking-wider uppercase">
-            {Math.round(zoom * 100)}%
-          </span>
-          <button
-            onClick={handleZoomIn}
-            className="px-2 py-1 text-xs tracking-wider uppercase transition-all duration-300 border border-black hover:bg-black hover:text-white"
-          >
-            Zoom In
-          </button>
-          <button
-            onClick={handleResetZoom}
-            className="px-2 py-1 text-xs tracking-wider uppercase transition-all duration-300 border border-black hover:bg-black hover:text-white"
-          >
-            Reset
-          </button>
-        </div>
-
-        {/* Controls for Desktop */}
-        <div className="items-center hidden space-x-3 md:flex">
+          <div className="flex items-center space-x-3">
             <button
               onClick={handleZoomOut}
-              className="px-2 py-1 text-xs tracking-wider uppercase transition-all duration-300 border border-black hover:bg-black hover:text-white"
+              className="px-2 py-1 text-xs tracking-wider uppercase transition-all duration-500 border border-black hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
             >
               Zoom Out
             </button>
@@ -185,13 +161,47 @@ function App() {
             </span>
             <button
               onClick={handleZoomIn}
-              className="px-2 py-1 text-xs tracking-wider uppercase transition-all duration-300 border border-black hover:bg-black hover:text-white"
+              className="px-2 py-1 text-xs tracking-wider uppercase transition-all duration-500 border border-black hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
             >
               Zoom In
             </button>
             <button
               onClick={handleResetZoom}
-              className="px-2 py-1 text-xs tracking-wider uppercase transition-all duration-300 border border-black hover:bg-black hover:text-white"
+              className="px-2 py-1 text-xs tracking-wider uppercase transition-all duration-500 border border-black hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
+            >
+              Reset
+            </button>
+          </div>
+          <button
+            onClick={toggleMobileMenu}
+            className="relative flex flex-col items-center justify-around w-8 h-8 p-2 transition-all duration-500 border border-black hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
+          >
+            <span className={`block w-6 h-0.5 bg-black transition-all duration-500 ${isMobileMenuOpen ? 'rotate-45 translate-y-[7px]' : ''}`}></span>
+            <span className={`block w-6 h-0.5 bg-black transition-all duration-500 ${isMobileMenuOpen ? 'opacity-0' : ''}`}></span>
+            <span className={`block w-6 h-0.5 bg-black transition-all duration-500 ${isMobileMenuOpen ? '-rotate-45 -translate-y-[7px]' : ''}`}></span>
+          </button>
+        </div>
+
+        {/* Controls for Desktop */}
+        <div className="items-center hidden space-x-3 md:flex">
+            <button
+              onClick={handleZoomOut}
+              className="px-2 py-1 text-xs tracking-wider uppercase transition-all duration-500 border border-black hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
+            >
+              Zoom Out
+            </button>
+            <span className="text-xs font-medium tracking-wider uppercase">
+              {Math.round(zoom * 100)}%
+            </span>
+            <button
+              onClick={handleZoomIn}
+              className="px-2 py-1 text-xs tracking-wider uppercase transition-all duration-500 border border-black hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
+            >
+              Zoom In
+            </button>
+            <button
+              onClick={handleResetZoom}
+              className="px-2 py-1 text-xs tracking-wider uppercase transition-all duration-500 border border-black hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
             >
               Reset
             </button>
@@ -248,28 +258,28 @@ function App() {
       {/* Export Popup */}
       {showExportPopup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-          <div className="relative w-full max-w-xs p-6 mx-auto bg-white rounded-lg shadow-xl sm:max-w-sm">
-            <h3 className="mb-4 text-lg font-medium text-center">Select the export format</h3>
-            <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3">
+          <div className="w-full max-w-md p-6 bg-white shadow-lg">
+            <h2 className="mb-4 text-xl font-medium">Exportar Imagen</h2>
+            <div className="flex justify-end space-x-4">
               <button
                 onClick={() => handleExport('png')}
-                className="flex-1 px-4 py-2 text-white transition-colors bg-black rounded hover:bg-gray-800"
+                className="px-4 py-2 text-white transition-all duration-500 bg-black hover:bg-gray-800 focus:outline-none focus:bg-white focus:text-black active:bg-gray-800"
               >
-                PNG
+                Exportar como PNG
               </button>
               <button
                 onClick={() => handleExport('jpg')}
-                className="flex-1 px-4 py-2 text-white transition-colors bg-black rounded hover:bg-gray-800"
+                className="px-4 py-2 text-white transition-all duration-500 bg-black hover:bg-gray-800 focus:outline-none focus:bg-white focus:text-black active:bg-gray-800"
               >
-                JPG
+                Exportar como JPG
+              </button>
+              <button
+                onClick={() => setShowExportPopup(false)}
+                className="px-4 py-2 text-black transition-all duration-500 border border-black hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
+              >
+                Cancelar
               </button>
             </div>
-            <button
-              onClick={() => setShowExportPopup(false)}
-              className="w-full px-4 py-2 mt-4 text-gray-800 transition-colors bg-gray-200 rounded hover:bg-gray-300"
-            >
-              Close
-            </button>
           </div>
         </div>
       )}
