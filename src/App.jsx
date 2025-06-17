@@ -174,11 +174,11 @@ function App() {
           </div>
           <button
             onClick={toggleMobileMenu}
-            className="relative flex flex-col items-center justify-around w-8 h-8 p-2 transition-all duration-500 border border-black hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
+            className="p-0.5 border border-black hover:bg-black hover:text-white relative w-8 h-8 focus:outline-none focus:bg-white focus:text-black transition-all duration-500 active:bg-black active:text-white group"
           >
-            <span className={`block w-6 h-0.5 bg-black transition-all duration-500 ${isMobileMenuOpen ? 'rotate-45 translate-y-[7px]' : ''}`}></span>
-            <span className={`block w-6 h-0.5 bg-black transition-all duration-500 ${isMobileMenuOpen ? 'opacity-0' : ''}`}></span>
-            <span className={`block w-6 h-0.5 bg-black transition-all duration-500 ${isMobileMenuOpen ? '-rotate-45 -translate-y-[7px]' : ''}`}></span>
+            <span className={`block w-6 h-0.5 bg-black transition-all duration-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full ${isMobileMenuOpen ? 'rotate-45' : '-translate-y-[7px]'}`}></span>
+            <span className={`block w-6 h-0.5 bg-black transition-all duration-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full ${isMobileMenuOpen ? 'opacity-0' : ''}`}></span>
+            <span className={`block w-6 h-0.5 bg-black transition-all duration-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full ${isMobileMenuOpen ? '-rotate-45' : 'translate-y-[5px]'}`}></span>
           </button>
         </div>
 
