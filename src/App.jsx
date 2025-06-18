@@ -1,6 +1,17 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import CanvasPreview from './components/CanvasPreview'
 import ControlPanel from './components/ControlPanel'
+
+// Hook para detectar si es móvil
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  return isMobile;
+}
 
 function App() {
   const [image, setImage] = useState(null)
@@ -28,6 +39,10 @@ function App() {
 
   const canvasRef = useRef(null)
   const canvasContainerRef = useRef(null) // New ref for the canvas container
+
+  const [menuMinimized, setMenuMinimized] = useState(false);
+
+  const isMobile = useIsMobile();
 
   const handleImageLoad = useCallback((file) => {
     const img = new Image()
@@ -149,100 +164,56 @@ function App() {
       {/* Unified Header */}
       <div className="flex fixed top-0 z-50 justify-between items-center p-4 w-full bg-white border-b border-gray-200">
         <h1 className="text-xl font-medium tracking-tight">Dither Tool</h1>
-
-        {/* Controls for Mobile */}
-        <div className="flex items-center space-x-3 md:hidden">
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={handleZoomOut}
-              className="px-2 py-1 text-xs tracking-wider uppercase border border-black transition-all duration-500 hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
-            >
-              Zoom Out
-            </button>
-            <span className="text-xs font-medium tracking-wider uppercase">
-              {Math.round(zoom * 100)}%
-            </span>
-            <button
-              onClick={handleZoomIn}
-              className="px-2 py-1 text-xs tracking-wider uppercase border border-black transition-all duration-500 hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
-            >
-              Zoom In
-            </button>
-            <button
-              onClick={handleResetZoom}
-              className="px-2 py-1 text-xs tracking-wider uppercase border border-black transition-all duration-500 hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
-            >
-              Reset
-            </button>
-          </div>
+        <div className="flex items-center space-x-3">
+          {/* Botón Exportar en el header */}
           <button
-            onClick={toggleMobileMenu}
-            className="p-0.5 border border-black hover:bg-black hover:text-white relative w-8 h-8 focus:outline-none focus:bg-white focus:text-black transition-all duration-500 active:bg-black active:text-white group"
+            onClick={() => setShowExportPopup(true)}
+            disabled={!image}
+            className={`px-4 py-2 text-sm font-medium text-white rounded ${image ? 'bg-black hover:bg-gray-800' : 'bg-gray-300 cursor-not-allowed'} transition-colors`}
           >
-            <span className={`block w-6 h-0.5 bg-black transition-all duration-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full ${isMobileMenuOpen ? 'rotate-45' : '-translate-y-[7px]'}`}></span>
-            <span className={`block w-6 h-0.5 bg-black transition-all duration-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full ${isMobileMenuOpen ? 'opacity-0' : ''}`}></span>
-            <span className={`block w-6 h-0.5 bg-black transition-all duration-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full ${isMobileMenuOpen ? '-rotate-45' : 'translate-y-[5px]'}`}></span>
+            EXPORT
           </button>
-        </div>
-
-        {/* Controls for Desktop */}
-        <div className="hidden items-center space-x-3 md:flex">
-            <button
-              onClick={handleZoomOut}
-              className="px-2 py-1 text-xs tracking-wider uppercase border border-black transition-all duration-500 hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
-            >
-              Zoom Out
-            </button>
-            <span className="text-xs font-medium tracking-wider uppercase">
-              {Math.round(zoom * 100)}%
-            </span>
-            <button
-              onClick={handleZoomIn}
-              className="px-2 py-1 text-xs tracking-wider uppercase border border-black transition-all duration-500 hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
-            >
-              Zoom In
-            </button>
-            <button
-              onClick={handleResetZoom}
-              className="px-2 py-1 text-xs tracking-wider uppercase border border-black transition-all duration-500 hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
-            >
-              Reset
-            </button>
         </div>
       </div>
 
       {/* Side Menu - Controls */}
-      <div className={`hidden overflow-y-auto fixed left-0 z-40 w-80 bg-white shadow-lg md:block top-[56px] h-[calc(100vh-56px)]`}>
-        <div className="flex-1 p-8">
-          <ControlPanel
-            settings={settings}
-            onSettingsChange={handleSettingsChange}
-            onImageLoad={handleImageLoad}
-            onExport={handleExport}
-            hasImage={!!image}
-            useCustomColors={useCustomColors}
-            onUseCustomColorsToggle={handleUseCustomColorsToggle}
-            customNeonColors={customNeonColors}
-            setCustomNeonColor={setCustomNeonColor}
-            setShowExportPopup={setShowExportPopup}
-          />
-        </div>
-      </div>
-
-      {/* Menú móvil (side menu slide-in) */}
-      <div className={`
-        fixed inset-y-0 left-0 z-40 w-80 bg-white transform transition-transform duration-300 ease-in-out overflow-y-auto
-        md:hidden
-        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
-      `} style={{ top: '64px' }}> {/* Offset por la altura del header */}
-        {/* Header */}
-        <header className="sticky top-0 z-10 px-8 py-6 bg-white border-b border-gray-200">
-          <h1 className="text-2xl font-medium tracking-tight">Dither Tool</h1>
-          <div className="mt-2 text-sm text-gray-500">
-            {image ? `${canvasSize.width} × ${canvasSize.height}` : 'No image loaded'}
+      {!menuMinimized ? (
+        <div className={`hidden overflow-y-auto fixed left-0 z-40 w-80 bg-white shadow-lg md:block top-[56px] h-[calc(100vh-56px)]`}>
+          {/* Botón minimizar */}
+          <button
+            onClick={() => setMenuMinimized(true)}
+            className="flex absolute top-2 right-2 justify-center items-center w-8 h-8 bg-white rounded-full border border-gray-300 shadow hover:bg-gray-100"
+            title="Minimizar menú"
+          >
+            -
+          </button>
+          <div className="flex-1 p-8">
+            <ControlPanel
+              settings={settings}
+              onSettingsChange={handleSettingsChange}
+              onImageLoad={handleImageLoad}
+              onExport={handleExport}
+              hasImage={!!image}
+              useCustomColors={useCustomColors}
+              onUseCustomColorsToggle={handleUseCustomColorsToggle}
+              customNeonColors={customNeonColors}
+              setCustomNeonColor={setCustomNeonColor}
+              setShowExportPopup={setShowExportPopup}
+            />
           </div>
-        </header>
-        <div className="flex-1 p-8">
+        </div>
+      ) : null}
+
+      {/* Menú deslizable para móvil */}
+      {isMobileMenuOpen && isMobile && (
+        <div className="fixed inset-0 z-50 p-6 bg-white shadow-lg md:hidden animate-slide-in-left">
+          <button
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="flex absolute top-2 right-2 justify-center items-center w-8 h-8 bg-white rounded-full border border-gray-300 shadow hover:bg-gray-100"
+            title="Cerrar menú"
+          >
+            ×
+          </button>
           <ControlPanel
             settings={settings}
             onSettingsChange={handleSettingsChange}
@@ -256,10 +227,28 @@ function App() {
             setShowExportPopup={setShowExportPopup}
           />
         </div>
-      </div>
+      )}
+
+      {/* Botón circular de flechitas SIEMPRE visible salvo cuando el menú está abierto */}
+      {((isMobile && !isMobileMenuOpen) || (!isMobile && menuMinimized)) && (
+        <button
+          className="flex fixed left-0 top-1/2 z-50 justify-center items-center w-14 h-14 text-2xl text-white bg-black rounded-r-full border border-white shadow-lg"
+          style={{ transform: 'translateY(-50%)' }}
+          onClick={() => {
+            if (isMobile) {
+              setIsMobileMenuOpen(true);
+            } else {
+              setMenuMinimized(false);
+            }
+          }}
+          title="Abrir menú"
+        >
+          <span className="text-2xl">&#187;&#187;</span>
+        </button>
+      )}
 
       {/* Main Canvas Area */}
-      <div ref={canvasContainerRef} className="flex-1 p-4 pt-20 w-full md:p-8" style={{height: 'calc(100vh - 56px)'}}> {/* Ocupa todo el alto menos el header */}
+      <div ref={canvasContainerRef} className="flex-1 p-4 pt-20 w-full md:p-8" style={{height: 'calc(100vh - 56px)'}}>
         <CanvasPreview
           ref={canvasRef}
           image={image}
@@ -274,6 +263,30 @@ function App() {
           offset={offset}
           setOffset={setOffset}
         />
+        {/* Isla flotante de controles de zoom/reset */}
+        <div className="flex fixed right-6 bottom-6 z-50 flex-col items-center p-3 space-y-2 bg-white rounded-lg border border-gray-200 shadow-lg md:absolute">
+          <button
+            onClick={handleZoomIn}
+            className="flex justify-center items-center w-10 h-10 text-xl text-white bg-black rounded-full hover:bg-gray-800 focus:outline-none"
+            title="Zoom In"
+          >
+            +
+          </button>
+          <button
+            onClick={handleZoomOut}
+            className="flex justify-center items-center w-10 h-10 text-xl text-white bg-black rounded-full hover:bg-gray-800 focus:outline-none"
+            title="Zoom Out"
+          >
+            -
+          </button>
+          <button
+            onClick={handleResetZoom}
+            className="flex justify-center items-center w-10 h-10 text-xs text-black bg-gray-200 rounded-full hover:bg-gray-300 focus:outline-none"
+            title="Reset"
+          >
+            RESET
+          </button>
+        </div>
       </div>
 
       {/* Export Popup */}
