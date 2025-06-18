@@ -57,10 +57,16 @@ const CanvasPreview = forwardRef(({
   zoom,
   canvasSize,
   useCustomColors,
-  customNeonColors
+  customNeonColors,
+  offset,
+  setOffset
 }, ref) => {
   const canvasRef = useRef(null)
   const containerRef = useRef(null)
+
+  // Estado para pan
+  const isPanning = useRef(false)
+  const lastPos = useRef({ x: 0, y: 0 })
 
   // ✅ Expose canvas DOM to parent
   useImperativeHandle(ref, () => canvasRef.current)
@@ -166,6 +172,55 @@ const CanvasPreview = forwardRef(({
 
   }, [image, debouncedSettings])
 
+  // Pan: Mouse events
+  const handleMouseDown = (e) => {
+    isPanning.current = true
+    lastPos.current = { x: e.clientX, y: e.clientY }
+    document.body.style.cursor = 'grabbing'
+  }
+  const handleMouseMove = (e) => {
+    if (!isPanning.current) return
+    const dx = e.clientX - lastPos.current.x
+    const dy = e.clientY - lastPos.current.y
+    setOffset(prev => ({ x: prev.x + dx, y: prev.y + dy }))
+    lastPos.current = { x: e.clientX, y: e.clientY }
+  }
+  const handleMouseUp = () => {
+    isPanning.current = false
+    document.body.style.cursor = ''
+  }
+
+  // Pan: Touch events
+  const handleTouchStart = (e) => {
+    if (e.touches.length !== 1) return
+    isPanning.current = true
+    lastPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+  }
+  const handleTouchMove = (e) => {
+    if (!isPanning.current || e.touches.length !== 1) return
+    const dx = e.touches[0].clientX - lastPos.current.x
+    const dy = e.touches[0].clientY - lastPos.current.y
+    setOffset(prev => ({ x: prev.x + dx, y: prev.y + dy }))
+    lastPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+  }
+  const handleTouchEnd = () => {
+    isPanning.current = false
+  }
+
+  // Limpiar listeners al desmontar
+  React.useEffect(() => {
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    window.addEventListener('touchmove', handleTouchMove)
+    window.addEventListener('touchend', handleTouchEnd)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+      window.removeEventListener('touchmove', handleTouchMove)
+      window.removeEventListener('touchend', handleTouchEnd)
+    }
+  })
+
   const handleDragOver = (e) => {
     e.preventDefault()
   }
@@ -182,12 +237,13 @@ const CanvasPreview = forwardRef(({
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col w-full h-full" style={{height: '100%'}}>
 
       {/* Canvas Container */}
       <div
         ref={containerRef}
-        className="flex items-center justify-center flex-1 overflow-auto canvas-container"
+        className="flex items-center justify-center flex-1 w-full h-full overflow-auto canvas-container"
+        style={{height: '100%'}}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
       >
@@ -195,10 +251,14 @@ const CanvasPreview = forwardRef(({
           <canvas
             ref={canvasRef}
             style={{
-              transform: `scale(${zoom})`,
+              display: 'block',
+              transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
               transformOrigin: 'center',
-              imageRendering: zoom > 2 ? 'pixelated' : 'auto'
+              imageRendering: zoom > 2 ? 'pixelated' : 'auto',
+              cursor: isPanning.current ? 'grabbing' : 'grab'
             }}
+            onMouseDown={handleMouseDown}
+            onTouchStart={handleTouchStart}
           />
         ) : (
           <div className="p-4 text-center text-gray-400 md:p-8">

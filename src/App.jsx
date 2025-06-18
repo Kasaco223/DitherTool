@@ -24,6 +24,8 @@ function App() {
   const [useCustomColors, setUseCustomColors] = useState(false);
   const [customNeonColors, setCustomNeonColors] = useState({ h: 300, s: 100, v: 100 }); // Magenta Neón por defecto
 
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+
   const canvasRef = useRef(null)
   const canvasContainerRef = useRef(null) // New ref for the canvas container
 
@@ -81,6 +83,7 @@ function App() {
 
   const handleResetZoom = useCallback(() => {
     setZoom(1)
+    setOffset({ x: 0, y: 0 }) // Centrar la imagen
   }, [])
 
   const handleExport = useCallback((format) => {
@@ -142,9 +145,9 @@ function App() {
   }, [])
 
   return (
-    <div className="flex flex-col min-h-screen text-black bg-white md:flex-row">
+    <div className="flex overflow-x-hidden flex-col min-h-screen text-black bg-white md:flex-row">
       {/* Unified Header */}
-      <div className="fixed top-0 z-50 flex items-center justify-between w-full p-4 bg-white border-b border-gray-200">
+      <div className="flex fixed top-0 z-50 justify-between items-center p-4 w-full bg-white border-b border-gray-200">
         <h1 className="text-xl font-medium tracking-tight">Dither Tool</h1>
 
         {/* Controls for Mobile */}
@@ -152,7 +155,7 @@ function App() {
           <div className="flex items-center space-x-3">
             <button
               onClick={handleZoomOut}
-              className="px-2 py-1 text-xs tracking-wider uppercase transition-all duration-500 border border-black hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
+              className="px-2 py-1 text-xs tracking-wider uppercase border border-black transition-all duration-500 hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
             >
               Zoom Out
             </button>
@@ -161,13 +164,13 @@ function App() {
             </span>
             <button
               onClick={handleZoomIn}
-              className="px-2 py-1 text-xs tracking-wider uppercase transition-all duration-500 border border-black hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
+              className="px-2 py-1 text-xs tracking-wider uppercase border border-black transition-all duration-500 hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
             >
               Zoom In
             </button>
             <button
               onClick={handleResetZoom}
-              className="px-2 py-1 text-xs tracking-wider uppercase transition-all duration-500 border border-black hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
+              className="px-2 py-1 text-xs tracking-wider uppercase border border-black transition-all duration-500 hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
             >
               Reset
             </button>
@@ -183,10 +186,10 @@ function App() {
         </div>
 
         {/* Controls for Desktop */}
-        <div className="items-center hidden space-x-3 md:flex">
+        <div className="hidden items-center space-x-3 md:flex">
             <button
               onClick={handleZoomOut}
-              className="px-2 py-1 text-xs tracking-wider uppercase transition-all duration-500 border border-black hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
+              className="px-2 py-1 text-xs tracking-wider uppercase border border-black transition-all duration-500 hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
             >
               Zoom Out
             </button>
@@ -195,13 +198,13 @@ function App() {
             </span>
             <button
               onClick={handleZoomIn}
-              className="px-2 py-1 text-xs tracking-wider uppercase transition-all duration-500 border border-black hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
+              className="px-2 py-1 text-xs tracking-wider uppercase border border-black transition-all duration-500 hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
             >
               Zoom In
             </button>
             <button
               onClick={handleResetZoom}
-              className="px-2 py-1 text-xs tracking-wider uppercase transition-all duration-500 border border-black hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
+              className="px-2 py-1 text-xs tracking-wider uppercase border border-black transition-all duration-500 hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
             >
               Reset
             </button>
@@ -209,11 +212,29 @@ function App() {
       </div>
 
       {/* Side Menu - Controls */}
+      <div className={`hidden overflow-y-auto fixed left-0 z-40 w-80 bg-white shadow-lg md:block top-[56px] h-[calc(100vh-56px)]`}>
+        <div className="flex-1 p-8">
+          <ControlPanel
+            settings={settings}
+            onSettingsChange={handleSettingsChange}
+            onImageLoad={handleImageLoad}
+            onExport={handleExport}
+            hasImage={!!image}
+            useCustomColors={useCustomColors}
+            onUseCustomColorsToggle={handleUseCustomColorsToggle}
+            customNeonColors={customNeonColors}
+            setCustomNeonColor={setCustomNeonColor}
+            setShowExportPopup={setShowExportPopup}
+          />
+        </div>
+      </div>
+
+      {/* Menú móvil (side menu slide-in) */}
       <div className={`
         fixed inset-y-0 left-0 z-40 w-80 bg-white transform transition-transform duration-300 ease-in-out overflow-y-auto
-        md:relative md:translate-x-0 md:flex-shrink-0
+        md:hidden
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
-      `} style={{ top: '64px' }}> {/* Offset by mobile header height */}
+      `} style={{ top: '64px' }}> {/* Offset por la altura del header */}
         {/* Header */}
         <header className="sticky top-0 z-10 px-8 py-6 bg-white border-b border-gray-200">
           <h1 className="text-2xl font-medium tracking-tight">Dither Tool</h1>
@@ -221,8 +242,6 @@ function App() {
             {image ? `${canvasSize.width} × ${canvasSize.height}` : 'No image loaded'}
           </div>
         </header>
-
-        {/* Control Panel */}
         <div className="flex-1 p-8">
           <ControlPanel
             settings={settings}
@@ -240,7 +259,7 @@ function App() {
       </div>
 
       {/* Main Canvas Area */}
-      <div ref={canvasContainerRef} className="flex-1 p-4 pt-20 md:p-8"> {/* Adjusted padding-top */}
+      <div ref={canvasContainerRef} className="flex-1 p-4 pt-20 w-full md:p-8" style={{height: 'calc(100vh - 56px)'}}> {/* Ocupa todo el alto menos el header */}
         <CanvasPreview
           ref={canvasRef}
           image={image}
@@ -252,30 +271,32 @@ function App() {
           canvasSize={canvasSize}
           useCustomColors={useCustomColors}
           customNeonColors={customNeonColors}
+          offset={offset}
+          setOffset={setOffset}
         />
       </div>
 
       {/* Export Popup */}
       {showExportPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-          <div className="w-full max-w-md p-6 bg-white shadow-lg">
+        <div className="flex fixed inset-0 z-50 justify-center items-center p-4 bg-black bg-opacity-50">
+          <div className="p-6 w-full max-w-md bg-white shadow-lg">
             <h2 className="mb-4 text-xl font-medium">Exportar Imagen</h2>
             <div className="flex justify-end space-x-4">
               <button
                 onClick={() => handleExport('png')}
-                className="px-4 py-2 text-white transition-all duration-500 bg-black hover:bg-gray-800 focus:outline-none focus:bg-white focus:text-black active:bg-gray-800"
+                className="px-4 py-2 text-white bg-black transition-all duration-500 hover:bg-gray-800 focus:outline-none focus:bg-white focus:text-black active:bg-gray-800"
               >
                 Exportar como PNG
               </button>
               <button
                 onClick={() => handleExport('jpg')}
-                className="px-4 py-2 text-white transition-all duration-500 bg-black hover:bg-gray-800 focus:outline-none focus:bg-white focus:text-black active:bg-gray-800"
+                className="px-4 py-2 text-white bg-black transition-all duration-500 hover:bg-gray-800 focus:outline-none focus:bg-white focus:text-black active:bg-gray-800"
               >
                 Exportar como JPG
               </button>
               <button
                 onClick={() => setShowExportPopup(false)}
-                className="px-4 py-2 text-black transition-all duration-500 border border-black hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
+                className="px-4 py-2 text-black border border-black transition-all duration-500 hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
               >
                 Cancelar
               </button>
