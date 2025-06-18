@@ -41,6 +41,7 @@ function App() {
   const canvasContainerRef = useRef(null) // New ref for the canvas container
 
   const [menuMinimized, setMenuMinimized] = useState(false);
+  const [minimizeButtonAlignUp, setMinimizeButtonAlignUp] = useState(false);
 
   const isMobile = useIsMobile();
 
@@ -182,12 +183,12 @@ function App() {
           {/* Botón minimizar */}
           <button
             onClick={() => setMenuMinimized(true)}
-            className="flex absolute top-2 right-2 justify-center items-center w-8 h-8 bg-white rounded-full border border-gray-300 shadow hover:bg-gray-100"
+            className={`flex absolute right-0 top-6 justify-center items-center w-8 h-8 font-bold text-black bg-white rounded-none border border-black shadow-none hover:bg-gray-100`}
             title="Minimizar menú"
           >
-            -
+            <span className="block leading-none text-1xl" style={{ transform: 'translateY(-1px)' }}>{'<'}</span>
           </button>
-          <div className="flex-1 p-8">
+          <div className="flex-1 p-8 mt-10">
             <ControlPanel
               settings={settings}
               onSettingsChange={handleSettingsChange}
@@ -209,30 +210,32 @@ function App() {
         <div className="fixed inset-0 z-50 p-6 bg-white shadow-lg md:hidden animate-slide-in-left">
           <button
             onClick={() => setIsMobileMenuOpen(false)}
-            className="flex absolute top-2 right-2 justify-center items-center w-8 h-8 bg-white rounded-full border border-gray-300 shadow hover:bg-gray-100"
+            className="flex absolute right-0 top-6 justify-center items-center w-8 h-8 font-bold text-black bg-white rounded-none border border-black shadow-none hover:bg-gray-100"
             title="Cerrar menú"
           >
-            ×
+            <span className="block text-3xl leading-none" style={{ transform: 'translateY(-1.5px)' }}>{'<'}</span>
           </button>
-          <ControlPanel
-            settings={settings}
-            onSettingsChange={handleSettingsChange}
-            onImageLoad={handleImageLoad}
-            onExport={handleExport}
-            hasImage={!!image}
-            useCustomColors={useCustomColors}
-            onUseCustomColorsToggle={handleUseCustomColorsToggle}
-            customNeonColors={customNeonColors}
-            setCustomNeonColor={setCustomNeonColor}
-            setShowExportPopup={setShowExportPopup}
-          />
+          <div className="mt-10">
+            <ControlPanel
+              settings={settings}
+              onSettingsChange={handleSettingsChange}
+              onImageLoad={handleImageLoad}
+              onExport={handleExport}
+              hasImage={!!image}
+              useCustomColors={useCustomColors}
+              onUseCustomColorsToggle={handleUseCustomColorsToggle}
+              customNeonColors={customNeonColors}
+              setCustomNeonColor={setCustomNeonColor}
+              setShowExportPopup={setShowExportPopup}
+            />
+          </div>
         </div>
       )}
 
       {/* Botón circular de flechitas SIEMPRE visible salvo cuando el menú está abierto */}
       {((isMobile && !isMobileMenuOpen) || (!isMobile && menuMinimized)) && (
         <button
-          className="flex fixed left-0 top-1/2 z-50 justify-center items-center w-14 h-14 text-2xl text-white bg-black rounded-r-full border border-white shadow-lg"
+          className="flex fixed left-0 top-1/2 z-50 justify-center items-center w-8 h-8 text-black bg-white rounded-none border border-black"
           style={{ transform: 'translateY(-50%)' }}
           onClick={() => {
             if (isMobile) {
@@ -243,7 +246,7 @@ function App() {
           }}
           title="Abrir menú"
         >
-          <span className="text-2xl">&#187;&#187;</span>
+          <span className="block leading-none text-1xl" style={{ transform: 'translateY(-1.5px)' }}>{'>'}</span>
         </button>
       )}
 
@@ -264,24 +267,27 @@ function App() {
           setOffset={setOffset}
         />
         {/* Isla flotante de controles de zoom/reset */}
-        <div className="flex fixed right-6 bottom-6 z-50 flex-col items-center p-3 space-y-2 bg-white rounded-lg border border-gray-200 shadow-lg md:absolute">
+        <div className="flex fixed right-6 bottom-6 z-50 flex-row items-center p-2 space-x-2 bg-white rounded-none border border-black shadow-none">
           <button
             onClick={handleZoomIn}
-            className="flex justify-center items-center w-10 h-10 text-xl text-white bg-black rounded-full hover:bg-gray-800 focus:outline-none"
+            className="flex justify-center items-center w-8 h-8 text-lg font-normal text-black bg-white rounded-none border border-black hover:bg-gray-100 focus:outline-none"
             title="Zoom In"
           >
             +
           </button>
+          <span className="mx-2 text-base font-normal text-black select-none" style={{minWidth: '48px', textAlign: 'center'}}>
+            {`${Math.round(zoom * 100)}%`}
+          </span>
           <button
             onClick={handleZoomOut}
-            className="flex justify-center items-center w-10 h-10 text-xl text-white bg-black rounded-full hover:bg-gray-800 focus:outline-none"
+            className="flex justify-center items-center w-8 h-8 text-lg font-normal text-black bg-white rounded-none border border-black hover:bg-gray-100 focus:outline-none"
             title="Zoom Out"
           >
             -
           </button>
           <button
             onClick={handleResetZoom}
-            className="flex justify-center items-center w-10 h-10 text-xs text-black bg-gray-200 rounded-full hover:bg-gray-300 focus:outline-none"
+            className="flex justify-center items-center px-3 ml-2 h-8 text-base font-normal text-black bg-white rounded-none border border-black hover:bg-gray-100 focus:outline-none"
             title="Reset"
           >
             RESET
