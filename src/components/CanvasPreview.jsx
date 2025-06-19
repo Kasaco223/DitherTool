@@ -8,6 +8,7 @@ import React, {
 import { applyAtkinson } from '../utils/atkinson'
 import { applySmoothDiffuse } from '../utils/smoothDiffuse'
 import { applyFloydSteinberg } from '../utils/floydSteinberg'
+import { applyStippling } from '../utils/stippling'
 
 // Debounce hook for performance optimization
 function useDebounce(value, delay) {
@@ -102,6 +103,9 @@ const CanvasPreview = forwardRef(({
       case 'Smooth Diffuse':
         processedImageData = applySmoothDiffuse(imageData, debouncedSettings)
         break
+      case 'Stippling':
+        processedImageData = applyStippling(imageData, debouncedSettings)
+        break
       case 'Floyd-Steinberg':
       default:
         processedImageData = applyFloydSteinberg(imageData, debouncedSettings)
@@ -169,6 +173,8 @@ const CanvasPreview = forwardRef(({
           }
         }
       }
+    } else if (ditherStyle === 'Stippling') {
+      ctx.putImageData(processedImageData, 0, 0);
     }
 
   }, [image, debouncedSettings])
