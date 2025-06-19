@@ -190,7 +190,7 @@ function App() {
 
       {/* Side Menu - Controls (desktop) */}
       {!menuMinimized ? (
-        <div className={`hidden overflow-y-auto fixed left-0 z-40 w-80 bg-white shadow-lg md:block top-[56px] h-[calc(100vh-56px)]`}>
+        <div className={`hidden overflow-y-auto fixed right-0 z-40 w-80 bg-white shadow-lg md:block top-[56px] h-[calc(100vh-56px)]`}>
           <div className="flex-1 p-8 mt-10">
             <ControlPanel
               settings={settings}
@@ -212,12 +212,12 @@ function App() {
       {/* Botón flotante para mostrar menú SOLO en escritorio cuando está minimizado */}
       {menuMinimized && !isMobile && (
         <button
-          className="flex fixed left-0 top-1/2 z-50 justify-center items-center w-8 h-8 text-black bg-white rounded-none border border-black"
+          className="flex fixed right-0 top-1/2 z-50 justify-center items-center w-8 h-8 text-black bg-white rounded-none border border-black"
           style={{ transform: 'translateY(-50%)' }}
           onClick={() => setMenuMinimized(false)}
           title="Abrir menú"
         >
-          <span className="block leading-none text-1xl" style={{ transform: 'translateY(-1.5px)' }}>{'>'}</span>
+          <span className="block leading-none text-1xl" style={{ transform: 'translateY(-1.5px)' }}>{'<'}</span>
         </button>
       )}
 
@@ -300,7 +300,7 @@ function App() {
         className="flex-1 p-4 pt-20 w-full md:p-8"
         style={{
           height: 'calc(100vh - 56px)',
-          marginLeft: !isMobile && !menuMinimized ? '320px' : 0
+          marginRight: !isMobile && !menuMinimized ? '320px' : 0
         }}
       >
         <CanvasPreview
@@ -317,9 +317,9 @@ function App() {
           offset={offset}
           setOffset={setOffset}
         />
-        {/* Isla flotante de controles de zoom/reset en desktop y mobile con menú cerrado */}
+        {/* Isla flotante de controles de zoom/reset en desktop y mobile con menú cerrado (ahora a la izquierda) */}
         {(!isMobile || (isMobile && !isMobileMenuOpen)) && (
-          <div className="flex fixed right-6 bottom-6 z-50 flex-row items-center p-2 space-x-2 bg-white rounded-none border border-black shadow-none">
+          <div className="flex fixed bottom-6 left-6 z-50 flex-row items-center p-2 space-x-2 bg-white rounded-none border border-black shadow-none">
             <button
               onClick={handleZoomIn}
               className="flex justify-center items-center w-8 h-8 text-lg font-normal text-black bg-white rounded-none border border-black hover:bg-gray-100 focus:outline-none"

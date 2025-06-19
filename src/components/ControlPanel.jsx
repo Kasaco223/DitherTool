@@ -201,7 +201,7 @@ const ControlPanel = ({
               className="flex justify-center items-center w-12 h-12 font-bold text-black bg-white rounded-none border border-black shadow-none hover:bg-gray-100"
               title="Minimizar menú"
             >
-              <span className="block leading-none text-1xl" style={{ transform: 'translateY(-1px)' }}>{'<'}</span>
+              <span className="block leading-none text-1xl" style={{ transform: 'translateY(-1px)' }}>{'>'}</span>
             </button>
           )}
         </div>

@@ -304,10 +304,10 @@ export function applyFloydSteinberg(imageData, settings) {
           tempColoredData[outputPixelIdx] = 0;
           tempColoredData[outputPixelIdx + 1] = 0;
           tempColoredData[outputPixelIdx + 2] = 0;
-        } else {
-          tempColoredData[outputPixelIdx] = 0;
-          tempColoredData[outputPixelIdx + 1] = 0;
-          tempColoredData[outputPixelIdx + 2] = 0;
+      } else {
+        tempColoredData[outputPixelIdx] = 0;
+        tempColoredData[outputPixelIdx + 1] = 0;
+        tempColoredData[outputPixelIdx + 2] = 0;
         }
         tempColoredData[outputPixelIdx + 3] = 255; // Completamente opaco
       }
@@ -356,10 +356,10 @@ export function applyFloydSteinberg(imageData, settings) {
           resultData[outputPixelIdx] = 0;
           resultData[outputPixelIdx + 1] = 0;
           resultData[outputPixelIdx + 2] = 0;
-        } else {
-          resultData[outputPixelIdx] = 0;
-          resultData[outputPixelIdx + 1] = 0;
-          resultData[outputPixelIdx + 2] = 0;
+      } else {
+        resultData[outputPixelIdx] = 0;
+        resultData[outputPixelIdx + 1] = 0;
+        resultData[outputPixelIdx + 2] = 0;
         }
         resultData[outputPixelIdx + 3] = 255; // Completamente opaco
       }
@@ -544,10 +544,10 @@ export function applyAtkinson(imageData, settings) {
         resultData[outputPixelIdx] = 0;
         resultData[outputPixelIdx + 1] = 0;
         resultData[outputPixelIdx + 2] = 0;
-      } else {
-        resultData[outputPixelIdx] = 0;
-        resultData[outputPixelIdx + 1] = 0;
-        resultData[outputPixelIdx + 2] = 0;
+    } else {
+      resultData[outputPixelIdx] = 0;
+      resultData[outputPixelIdx + 1] = 0;
+      resultData[outputPixelIdx + 2] = 0;
       }
       resultData[outputPixelIdx + 3] = 255; // Completamente opaco
     }
@@ -759,8 +759,8 @@ export function applySmoothDiffuse(imageData, settings) {
           resultData[outputPixelIdx + 2] = 255;
         } else {
           resultData[outputPixelIdx] = 0; // fondo negro
-          resultData[outputPixelIdx + 1] = 0;
-          resultData[outputPixelIdx + 2] = 0;
+        resultData[outputPixelIdx + 1] = 0;
+        resultData[outputPixelIdx + 2] = 0;
         }
         resultData[outputPixelIdx + 3] = 255; // Fondo
       }
