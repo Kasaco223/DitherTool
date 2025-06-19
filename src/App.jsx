@@ -242,24 +242,23 @@ function App() {
       {/* Menú deslizable desde abajo para mobile */}
       {isMobile && isMobileMenuOpen && (
         <>
-          {/* Botón cerrar menú móvil en la esquina superior derecha del panel, ahora sí flotante y fuera del flujo de la columna */}
-          <button
-            className="flex absolute top-4 right-4 z-50 justify-center items-center p-0 w-6 h-6 text-xs font-bold text-black bg-white rounded-none border border-black shadow-none"
-            onClick={() => setIsMobileMenuOpen(false)}
-            title="Cerrar menú"
-          >
-            <span className="block">{'v'}</span>
-          </button>
           <div
-            className="flex overflow-hidden fixed relative bottom-0 left-0 z-50 flex-col w-full h-1/2 bg-white shadow-lg md:border-t md:border-black"
+            className="flex overflow-hidden fixed bottom-0 left-0 z-50 flex-col w-full h-1/2 bg-white shadow-lg md:border-t md:border-black"
             style={{ touchAction: 'pan-y' }}
           >
-            {/* Header fijo para el menú mobile */}
-            <div className="flex fixed z-10 items-center w-full h-12 bg-white" style={{ left: 0, bottom: '50%', minHeight: '48px', maxHeight: '56px', top: 'auto' }}>
-              <span className="flex-1 text-base font-medium text-center">Menu</span>
+            {/* Header fijo para el menú mobile con botón cerrar alineado a la derecha */}
+            <div className="flex z-10 justify-between items-center px-4 w-full h-12 bg-white" style={{ minHeight: '48px', maxHeight: '56px' }}>
+              <span className="text-base font-medium">Menu</span>
+              <button
+                className="flex justify-center items-center p-0 w-6 h-6 text-xs font-bold text-black bg-white rounded-none border border-black shadow-none"
+                onClick={() => setIsMobileMenuOpen(false)}
+                title="Cerrar menú"
+              >
+                <span className="block">{'v'}</span>
+              </button>
             </div>
             {/* Contenido del menú con margin-top para dejar espacio al header */}
-            <div className="overflow-y-auto flex-1 p-4 h-full" style={{ WebkitOverflowScrolling: 'touch', marginTop: '56px' }}>
+            <div className="overflow-y-auto flex-1 p-4 h-full" style={{ WebkitOverflowScrolling: 'touch', marginTop: '48px' }}>
               <ControlPanel
                 settings={settings}
                 onSettingsChange={handleSettingsChange}
@@ -282,7 +281,7 @@ function App() {
         ref={canvasContainerRef}
         className="flex-1 p-4 pt-20 w-full md:p-8"
         style={{
-          height: 'calc(100vh - 56px)',
+          height: isMobile && isMobileMenuOpen ? '50vh' : 'calc(100vh - 56px)',
           marginRight: !isMobile && !menuMinimized ? '320px' : 0
         }}
       >
@@ -300,9 +299,9 @@ function App() {
           offset={offset}
           setOffset={setOffset}
         />
-        {/* Isla flotante de controles de zoom/reset en desktop y mobile con menú cerrado (ahora a la izquierda) */}
+        {/* Isla flotante de controles de zoom/reset en desktop y mobile con menú cerrado (ahora a la izquierda o derecha) */}
         {(!isMobile || (isMobile && !isMobileMenuOpen)) && (
-          <div className="flex fixed bottom-6 left-6 z-50 flex-row items-center p-2 space-x-2 bg-white rounded-none border border-black shadow-none">
+          <div className={`flex fixed bottom-6 ${isMobile ? 'right-6' : 'left-6'} z-50 flex-row items-center p-2 space-x-2 bg-white rounded-none border border-black shadow-none`}>
             <button
               onClick={handleZoomIn}
               className="flex justify-center items-center w-8 h-8 text-lg font-normal text-black bg-white rounded-none border border-black hover:bg-gray-100 focus:outline-none"
@@ -327,6 +326,37 @@ function App() {
             >
               RESET
             </button>
+          </div>
+        )}
+        {/* Isla de zoom en mobile cuando el menú está ABIERTO: anclada arriba del botón de cerrar menú */}
+        {isMobile && isMobileMenuOpen && (
+          <div className="flex fixed right-6 z-50" style={{ bottom: 'calc(50% + 10px)' }}>
+            <div className="flex flex-row items-center p-2 space-x-2 bg-white rounded-none border border-black shadow-none">
+              <button
+                onClick={handleZoomIn}
+                className="flex justify-center items-center w-8 h-8 text-lg font-normal text-black bg-white rounded-none border border-black hover:bg-gray-100 focus:outline-none"
+                title="Zoom In"
+              >
+                +
+              </button>
+              <span className="mx-2 text-base font-normal text-black select-none" style={{minWidth: '48px', textAlign: 'center'}}>
+                {`${Math.round(zoom * 100)}%`}
+              </span>
+              <button
+                onClick={handleZoomOut}
+                className="flex justify-center items-center w-8 h-8 text-lg font-normal text-black bg-white rounded-none border border-black hover:bg-gray-100 focus:outline-none"
+                title="Zoom Out"
+              >
+                -
+              </button>
+              <button
+                onClick={handleResetZoom}
+                className="flex justify-center items-center px-3 ml-2 h-8 text-base font-normal text-black bg-white rounded-none border border-black hover:bg-gray-100 focus:outline-none"
+                title="Reset"
+              >
+                RESET
+              </button>
+            </div>
           </div>
         )}
       </div>
