@@ -3,7 +3,7 @@ import CanvasPreview from './components/CanvasPreview'
 import ControlPanel from './components/ControlPanel'
 import ExportOptionsPopup from './components/ExportOptionsPopup'
 
-// Hook para detectar si es móvil
+// Hook para detectar mobile
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   useEffect(() => {
@@ -18,7 +18,6 @@ function App() {
   const [image, setImage] = useState(null)
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 })
   const [zoom, setZoom] = useState(1)
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [showExportPopup, setShowExportPopup] = useState(false)
   const [settings, setSettings] = useState({
     scale: 1,
@@ -45,6 +44,22 @@ function App() {
   const [minimizeButtonAlignUp, setMinimizeButtonAlignUp] = useState(false);
 
   const isMobile = useIsMobile();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Bloquear scroll del body cuando el menú móvil está abierto
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    // Prevenir zoom por doble tap en mobile
+    document.body.style.touchAction = 'manipulation';
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    };
+  }, [isMobileMenuOpen]);
 
   const handleImageLoad = useCallback((file) => {
     const img = new Image()
@@ -157,10 +172,6 @@ function App() {
     }
   }, [])
 
-  const toggleMobileMenu = useCallback(() => {
-    setIsMobileMenuOpen(prev => !prev)
-  }, [])
-
   return (
     <div className="flex overflow-x-hidden flex-col min-h-screen text-black bg-white md:flex-row">
       {/* Unified Header */}
@@ -178,7 +189,7 @@ function App() {
         </div>
       </div>
 
-      {/* Side Menu - Controls */}
+      {/* Side Menu - Controls (desktop) */}
       {!menuMinimized ? (
         <div className={`hidden overflow-y-auto fixed left-0 z-40 w-80 bg-white shadow-lg md:block top-[56px] h-[calc(100vh-56px)]`}>
           <div className="flex-1 p-8 mt-10">
@@ -191,7 +202,7 @@ function App() {
               useCustomColors={useCustomColors}
               onUseCustomColorsToggle={handleUseCustomColorsToggle}
               customNeonColors={customNeonColors}
-              setCustomNeonColor={setCustomNeonColor}
+               setCustomNeonColor={setCustomNeonColors}
               setShowExportPopup={setShowExportPopup}
               onMinimizeMenu={() => setMenuMinimized(true)}
             />
@@ -199,49 +210,62 @@ function App() {
         </div>
       ) : null}
 
-      {/* Menú deslizable para móvil */}
-      {isMobileMenuOpen && isMobile && (
-        <div className="fixed inset-0 z-50 p-6 bg-white shadow-lg md:hidden animate-slide-in-left">
-          <button
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="flex absolute right-0 top-6 justify-center items-center w-8 h-8 font-bold text-black bg-white rounded-none border border-black shadow-none hover:bg-gray-100"
-            title="Cerrar menú"
-          >
-            <span className="block text-3xl leading-none" style={{ transform: 'translateY(-1.5px)' }}>{'<'}</span>
-          </button>
-          <div className="mt-10">
-          <ControlPanel
-            settings={settings}
-            onSettingsChange={handleSettingsChange}
-            onImageLoad={handleImageLoad}
-            onExport={handleExport}
-            hasImage={!!image}
-            useCustomColors={useCustomColors}
-            onUseCustomColorsToggle={handleUseCustomColorsToggle}
-            customNeonColors={customNeonColors}
-            setCustomNeonColor={setCustomNeonColor}
-            setShowExportPopup={setShowExportPopup}
-          />
-        </div>
-      </div>
-      )}
-
-      {/* Botón circular de flechitas SIEMPRE visible salvo cuando el menú está abierto */}
-      {((isMobile && !isMobileMenuOpen) || (!isMobile && menuMinimized)) && (
+      {/* Botón flotante para mostrar menú SOLO en escritorio cuando está minimizado */}
+      {menuMinimized && !isMobile && (
         <button
           className="flex fixed left-0 top-1/2 z-50 justify-center items-center w-8 h-8 text-black bg-white rounded-none border border-black"
           style={{ transform: 'translateY(-50%)' }}
-          onClick={() => {
-            if (isMobile) {
-              setIsMobileMenuOpen(true);
-            } else {
-              setMenuMinimized(false);
-            }
-          }}
+          onClick={() => setMenuMinimized(false)}
           title="Abrir menú"
         >
           <span className="block leading-none text-1xl" style={{ transform: 'translateY(-1.5px)' }}>{'>'}</span>
         </button>
+      )}
+
+      {/* Botón flotante para mobile, esquina inferior izquierda */}
+      {isMobile && !isMobileMenuOpen && (
+        <button
+          className="flex fixed bottom-4 left-4 z-50 justify-center items-center w-10 h-10 bg-white rounded-none border border-black shadow"
+          onClick={() => setIsMobileMenuOpen(true)}
+          title="Abrir menú"
+        >
+          <span className="block text-2xl">{'^'}</span>
+        </button>
+      )}
+
+      {/* Menú deslizable desde abajo para mobile */}
+      {isMobile && isMobileMenuOpen && (
+        <div
+          className="flex overflow-hidden fixed bottom-0 left-0 z-50 flex-col w-full h-1/2 bg-white shadow-lg md:border-t md:border-black"
+          style={{ touchAction: 'pan-y' }}
+        >
+          {/* Header fijo para el menú mobile */}
+          <div className="flex fixed z-10 justify-between items-center px-4 w-full h-12 bg-white" style={{ left: 0, bottom: '50%', minHeight: '48px', maxHeight: '56px', top: 'auto' }}>
+            <span className="text-base font-medium">Menu</span>
+            <button
+              className="flex justify-center items-center w-10 h-10 bg-white rounded-none border border-black shadow"
+              onClick={() => setIsMobileMenuOpen(false)}
+              title="Cerrar menú"
+            >
+              <span className="block text-2xl">{'v'}</span>
+            </button>
+          </div>
+          {/* Contenido del menú con margin-top para dejar espacio al header */}
+          <div className="overflow-y-auto flex-1 p-4 h-full" style={{ WebkitOverflowScrolling: 'touch', marginTop: '56px' }}>
+            <ControlPanel
+              settings={settings}
+              onSettingsChange={handleSettingsChange}
+              onImageLoad={handleImageLoad}
+              onExport={handleExport}
+              hasImage={!!image}
+              useCustomColors={useCustomColors}
+              onUseCustomColorsToggle={handleUseCustomColorsToggle}
+              customNeonColors={customNeonColors}
+              setCustomNeonColor={setCustomNeonColors}
+              setShowExportPopup={setShowExportPopup}
+            />
+          </div>
+        </div>
       )}
 
       {/* Main Canvas Area */}
@@ -261,7 +285,8 @@ function App() {
           setOffset={setOffset}
         />
         {/* Isla flotante de controles de zoom/reset */}
-        <div className="flex fixed right-6 bottom-6 z-50 flex-row items-center p-2 space-x-2 bg-white rounded-none border border-black shadow-none">
+        <div className="flex fixed left-4 top-20 z-50 flex-row items-center p-2 space-x-2 bg-white rounded-none border border-black shadow-none md:right-6 md:bottom-6 md:left-auto md:top-auto"
+          style={{ marginTop: isMobile ? '16px' : undefined }}>
           <button
             onClick={handleZoomIn}
             className="flex justify-center items-center w-8 h-8 text-lg font-normal text-black bg-white rounded-none border border-black hover:bg-gray-100 focus:outline-none"

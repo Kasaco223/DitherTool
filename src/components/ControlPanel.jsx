@@ -104,6 +104,14 @@ const ControlPanel = ({
     // eslint-disable-next-line
   }, [customNeonColors, colorFormat])
 
+  // Añadir safeSetCustomNeonColor como función auxiliar
+  const safeSetCustomNeonColor = (newColor) => {
+    setCustomNeonColor(prev => ({
+      ...newColor,
+      a: typeof newColor.a === 'number' ? newColor.a : (prev.a ?? 1)
+    }));
+  };
+
   // Cuando el usuario escribe en el input (solo actualiza el valor local)
   const handleColorInputChange = (e) => {
     setPendingColor(e.target.value)
@@ -127,7 +135,7 @@ const ControlPanel = ({
     }
     if (rgb && rgb.every((x) => !isNaN(x))) {
       const [h, s, v] = rgbToHsv(rgb[0], rgb[1], rgb[2])
-      setCustomNeonColor({ h, s, v })
+      safeSetCustomNeonColor({ h, s, v })
     }
   }
 
@@ -224,7 +232,7 @@ const ControlPanel = ({
       if (preset.useCustomColors !== useCustomColors) {
         onUseCustomColorsToggle();
       }
-      setCustomNeonColor(preset.customNeonColors);
+      safeSetCustomNeonColor(preset.customNeonColors);
       setSelectedPreset(name);
     }
   };
@@ -237,7 +245,7 @@ const ControlPanel = ({
 
   const handleReset = () => {
     onSettingsChange(DEFAULT_SETTINGS);
-    setCustomNeonColor(DEFAULT_CUSTOM_NEON_COLORS);
+    safeSetCustomNeonColor(DEFAULT_CUSTOM_NEON_COLORS);
     if (useCustomColors) onUseCustomColorsToggle();
   };
 
@@ -245,7 +253,7 @@ const ControlPanel = ({
     setSelectedPreset(val);
     if (val === 'none') {
       onSettingsChange(DEFAULT_SETTINGS);
-      setCustomNeonColor(DEFAULT_CUSTOM_NEON_COLORS);
+      safeSetCustomNeonColor(DEFAULT_CUSTOM_NEON_COLORS);
       if (useCustomColors) onUseCustomColorsToggle();
       return;
     }
@@ -253,25 +261,25 @@ const ControlPanel = ({
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col">
       {/* Import/Export Buttons y Minimizar */}
       <div className="mb-3 space-y-2 md:mb-4 md:space-y-3">
         <div className="flex flex-row gap-3 items-center mb-2 w-full">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-          <button
-            onClick={handleImportClick}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+        <button
+          onClick={handleImportClick}
             className="flex-1 h-12 px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm uppercase tracking-wider border border-black hover:bg-black hover:text-white transition-all duration-300 rounded-none flex items-center justify-center"
-          >
-            Import Image
-          </button>
+        >
+          Import Image
+        </button>
           {onMinimizeMenu && (
-            <button
+        <button
               onClick={onMinimizeMenu}
               className="flex justify-center items-center w-12 h-12 font-bold text-black bg-white rounded-none border border-black shadow-none hover:bg-gray-100"
               title="Minimizar menú"
@@ -286,7 +294,7 @@ const ControlPanel = ({
           className={`w-full px-4 py-2 text-sm font-medium text-white rounded-none ${hasImage
               ? 'bg-black hover:bg-gray-800'
               : 'bg-gray-300 cursor-not-allowed'
-            } transition-colors`}
+          } transition-colors`}
         >
           Export
         </button> */}
@@ -332,7 +340,7 @@ const ControlPanel = ({
 
       <div className="slider-separator"></div>
       {/* Settings Panel */}
-      <div className="overflow-y-auto flex-1 control-panel">
+      <div className="overflow-y-auto control-panel">
         <div className="space-y-6 md:space-y-8">
           {/* Custom Colors Toggle */}
           <div className="flex items-center space-x-3">
@@ -356,7 +364,7 @@ const ControlPanel = ({
               <div className="mx-auto" style={{ width: 210, height: 210 }}>
                 <HsvaColorPicker
                   color={{ ...customNeonColors, a: 1 }}
-                  onChange={(newColor) => setCustomNeonColor({ ...newColor, a: customNeonColors.a ?? 1 })}
+                  onChange={(newColor) => safeSetCustomNeonColor({ ...newColor, a: customNeonColors.a ?? 1 })}
                   style={{ width: '100%', height: '100%' }}
                   alpha={false}
                 />
@@ -373,7 +381,7 @@ const ControlPanel = ({
                   value={Math.round((customNeonColors.a ?? 1) * 100)}
                   onChange={e => {
                     let val = Math.max(0, Math.min(100, Number(e.target.value)));
-                    setCustomNeonColor({ ...customNeonColors, a: val / 100 });
+                    safeSetCustomNeonColor({ ...customNeonColors, a: val / 100 });
                   }}
                   className="px-2 py-1 mx-2 w-16 text-xs text-right border border-black"
                 />
@@ -388,7 +396,7 @@ const ControlPanel = ({
                 value={Math.round((customNeonColors.a ?? 1) * 100)}
                 onChange={e => {
                   let val = Math.max(0, Math.min(100, Number(e.target.value)));
-                  setCustomNeonColor({ ...customNeonColors, a: val / 100 });
+                  safeSetCustomNeonColor({ ...customNeonColors, a: val / 100 });
                 }}
                 className="w-full slider"
                 style={getSliderBg(Math.round((customNeonColors.a ?? 1) * 100), 0, 100)}
@@ -611,14 +619,14 @@ const ControlPanel = ({
               >
                 Save
               </button>
-              <button
+          <button
                 onClick={() => { setShowPresetPopup(false); setPresetName(''); setPresetError(''); }}
                 className="px-4 py-1 text-black bg-white rounded-none border border-black hover:bg-gray-100"
-              >
+          >
                 Cancel
-              </button>
-            </div>
-          </div>
+          </button>
+        </div>
+      </div>
         </div>
       )}
     </div>
