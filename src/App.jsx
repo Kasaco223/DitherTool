@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import CanvasPreview from './components/CanvasPreview'
 import ControlPanel from './components/ControlPanel'
+import ExportOptionsPopup from './components/ExportOptionsPopup'
 
 // Hook para detectar si es móvil
 function useIsMobile() {
@@ -165,7 +166,7 @@ function App() {
       {/* Unified Header */}
       <div className="flex fixed top-0 z-50 justify-between items-center p-4 w-full bg-white border-b border-gray-200">
         <h1 className="text-xl font-medium tracking-tight">Dither Tool</h1>
-        <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3">
           {/* Botón Exportar en el header */}
           <button
             onClick={() => setShowExportPopup(true)}
@@ -173,21 +174,13 @@ function App() {
             className={`px-4 py-2 text-sm font-medium text-white rounded ${image ? 'bg-black hover:bg-gray-800' : 'bg-gray-300 cursor-not-allowed'} transition-colors`}
           >
             EXPORT
-          </button>
+            </button>
         </div>
       </div>
 
       {/* Side Menu - Controls */}
       {!menuMinimized ? (
         <div className={`hidden overflow-y-auto fixed left-0 z-40 w-80 bg-white shadow-lg md:block top-[56px] h-[calc(100vh-56px)]`}>
-          {/* Botón minimizar */}
-          <button
-            onClick={() => setMenuMinimized(true)}
-            className={`flex absolute right-0 top-6 justify-center items-center w-8 h-8 font-bold text-black bg-white rounded-none border border-black shadow-none hover:bg-gray-100`}
-            title="Minimizar menú"
-          >
-            <span className="block leading-none text-1xl" style={{ transform: 'translateY(-1px)' }}>{'<'}</span>
-          </button>
           <div className="flex-1 p-8 mt-10">
             <ControlPanel
               settings={settings}
@@ -200,6 +193,7 @@ function App() {
               customNeonColors={customNeonColors}
               setCustomNeonColor={setCustomNeonColor}
               setShowExportPopup={setShowExportPopup}
+              onMinimizeMenu={() => setMenuMinimized(true)}
             />
           </div>
         </div>
@@ -216,20 +210,20 @@ function App() {
             <span className="block text-3xl leading-none" style={{ transform: 'translateY(-1.5px)' }}>{'<'}</span>
           </button>
           <div className="mt-10">
-            <ControlPanel
-              settings={settings}
-              onSettingsChange={handleSettingsChange}
-              onImageLoad={handleImageLoad}
-              onExport={handleExport}
-              hasImage={!!image}
-              useCustomColors={useCustomColors}
-              onUseCustomColorsToggle={handleUseCustomColorsToggle}
-              customNeonColors={customNeonColors}
-              setCustomNeonColor={setCustomNeonColor}
-              setShowExportPopup={setShowExportPopup}
-            />
-          </div>
+          <ControlPanel
+            settings={settings}
+            onSettingsChange={handleSettingsChange}
+            onImageLoad={handleImageLoad}
+            onExport={handleExport}
+            hasImage={!!image}
+            useCustomColors={useCustomColors}
+            onUseCustomColorsToggle={handleUseCustomColorsToggle}
+            customNeonColors={customNeonColors}
+            setCustomNeonColor={setCustomNeonColor}
+            setShowExportPopup={setShowExportPopup}
+          />
         </div>
+      </div>
       )}
 
       {/* Botón circular de flechitas SIEMPRE visible salvo cuando el menú está abierto */}
@@ -297,31 +291,11 @@ function App() {
 
       {/* Export Popup */}
       {showExportPopup && (
-        <div className="flex fixed inset-0 z-50 justify-center items-center p-4 bg-black bg-opacity-50">
-          <div className="p-6 w-full max-w-md bg-white shadow-lg">
-            <h2 className="mb-4 text-xl font-medium">Exportar Imagen</h2>
-            <div className="flex justify-end space-x-4">
-              <button
-                onClick={() => handleExport('png')}
-                className="px-4 py-2 text-white bg-black transition-all duration-500 hover:bg-gray-800 focus:outline-none focus:bg-white focus:text-black active:bg-gray-800"
-              >
-                Exportar como PNG
-              </button>
-              <button
-                onClick={() => handleExport('jpg')}
-                className="px-4 py-2 text-white bg-black transition-all duration-500 hover:bg-gray-800 focus:outline-none focus:bg-white focus:text-black active:bg-gray-800"
-              >
-                Exportar como JPG
-              </button>
-              <button
-                onClick={() => setShowExportPopup(false)}
-                className="px-4 py-2 text-black border border-black transition-all duration-500 hover:bg-black hover:text-white focus:outline-none focus:bg-white focus:text-black active:bg-black active:text-white"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
+        <ExportOptionsPopup
+          onExportPng={() => handleExport('png')}
+          onExportJpg={() => handleExport('jpg')}
+          onClose={() => setShowExportPopup(false)}
+        />
       )}
     </div>
   )

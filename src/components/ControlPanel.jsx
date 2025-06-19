@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from 'react'
 import { hsvToRgb, rgbToHsv } from '../utils/dithering'
 import { HsvaColorPicker } from 'react-colorful'
+import CustomSelect from './CustomSelect'
 
 // Funciones auxiliares para conversión de color
 function rgbToHex(r, g, b) {
@@ -61,7 +62,8 @@ const ControlPanel = ({
   onUseCustomColorsToggle,
   customNeonColors,
   setCustomNeonColor,
-  setShowExportPopup
+  setShowExportPopup,
+  onMinimizeMenu
 }) => {
   const fileInputRef = useRef(null)
 
@@ -144,38 +146,56 @@ const ControlPanel = ({
     onSettingsChange({ [key]: value })
   }
 
+  // Función para obtener el background del slider con gradiente
+  function getSliderBg(value, min, max) {
+    const percent = ((value - min) / (max - min)) * 100;
+    return {
+      background: `linear-gradient(to right, #000 0%, #000 ${percent}%, #e5e5e5 ${percent}%, #e5e5e5 100%)`
+    };
+  }
+
   return (
     <div className="flex flex-col h-full">
-      {/* Import/Export Buttons */}
-      <div className="mb-6 space-y-3 md:mb-8 md:space-y-4">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileSelect}
-          className="hidden"
-        />
-        <button
-          onClick={handleImportClick}
-          className="w-full px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm uppercase tracking-wider border border-black hover:bg-black hover:text-white transition-all duration-300"
-        >
-          Import Image
-        </button>
-        <button
+      {/* Import/Export Buttons y Minimizar */}
+      <div className="mb-3 space-y-2 md:mb-4 md:space-y-3">
+        <div className="flex flex-row gap-3 items-center mb-2 w-full">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+          <button
+            onClick={handleImportClick}
+            className="flex-1 h-12 px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm uppercase tracking-wider border border-black hover:bg-black hover:text-white transition-all duration-300 rounded-none flex items-center justify-center"
+          >
+            Import Image
+          </button>
+          {onMinimizeMenu && (
+            <button
+              onClick={onMinimizeMenu}
+              className="flex justify-center items-center w-12 h-12 font-bold text-black bg-white rounded-none border border-black shadow-none hover:bg-gray-100"
+              title="Minimizar menú"
+            >
+              <span className="block leading-none text-1xl" style={{ transform: 'translateY(-1px)' }}>{'<'}</span>
+            </button>
+          )}
+        </div>
+        {/*<button
           onClick={() => setShowExportPopup(true)}
           disabled={!hasImage}
-          className={`w-full px-4 py-2 text-sm font-medium text-white rounded ${
-            hasImage
+          className={`w-full px-4 py-2 text-sm font-medium text-white rounded-none ${hasImage
               ? 'bg-black hover:bg-gray-800'
               : 'bg-gray-300 cursor-not-allowed'
-          } transition-colors`}
+            } transition-colors`}
         >
           Export
-        </button>
+        </button> */}
       </div>
-
+      <div className="slider-separator"></div>
       {/* Settings Panel */}
-      <div className="flex-1 overflow-y-auto control-panel">
+      <div className="overflow-y-auto flex-1 control-panel">
         <div className="space-y-6 md:space-y-8">
           {/* Custom Colors Toggle */}
           <div className="flex items-center space-x-3">
@@ -184,42 +204,48 @@ const ControlPanel = ({
               id="useCustomColors"
               checked={useCustomColors}
               onChange={onUseCustomColorsToggle}
-              className="w-4 h-4 border-gray-200 rounded-none focus:ring-black focus:ring-offset-0"
+              className="w-4 h-4 rounded-none border-gray-200 focus:ring-black focus:ring-offset-0"
             />
             <label htmlFor="useCustomColors" className="text-xs font-medium tracking-wide uppercase md:text-sm">
               Use Custom Colors
             </label>
           </div>
 
+          <div className="slider-separator"></div>
+
           {/* Custom Color Selector (conditionally rendered) */}
           {useCustomColors && (
             <div className="pt-4">
-              <HsvaColorPicker
-                color={{ ...customNeonColors, a: 1 }} // Add alpha for the picker
-                onChange={(newColor) => setCustomNeonColor({ h: newColor.h, s: newColor.s, v: newColor.v })}
-              />
-              <div className="mt-4 flex flex-col space-y-2">
-                <select
+              <div className="mx-auto" style={{ width: 210, height: 210 }}>
+                <HsvaColorPicker
+                  color={{ ...customNeonColors, a: 1 }} // Add alpha for the picker
+                  onChange={(newColor) => setCustomNeonColor({ h: newColor.h, s: newColor.s, v: newColor.v })}
+                  style={{ width: '100%', height: '100%' }}
+                />
+              </div>
+              <div className="flex flex-col mt-4 space-y-2">
+                <CustomSelect
+                  options={[
+                    { value: 'HEX', label: 'HEX' },
+                    { value: 'RGB', label: 'RGB' },
+                    { value: 'HSL', label: 'HSL' },
+                  ]}
                   value={colorFormat}
-                  onChange={e => setColorFormat(e.target.value)}
-                  className="border border-black px-2 py-1 text-xs w-24"
-                >
-                  <option value="HEX">HEX</option>
-                  <option value="RGB">RGB</option>
-                  <option value="HSL">HSL</option>
-                </select>
+                  onChange={setColorFormat}
+                  className="w-full text-xs"
+                />
                 <div className="flex flex-row space-x-2">
                   <input
                     type="text"
                     value={pendingColor}
                     onChange={handleColorInputChange}
                     onKeyDown={handleColorInputKeyDown}
-                    className="border border-black px-2 py-1 text-xs w-full"
+                    className="px-2 py-1 w-full text-xs border border-black"
                     spellCheck={false}
                   />
                   <button
                     onClick={applyPendingColor}
-                    className="px-3 py-1 border border-black bg-white text-xs font-medium hover:bg-gray-100"
+                    className="px-3 py-1 text-xs font-medium bg-white rounded-none border border-black hover:bg-gray-100"
                   >
                     Apply
                   </button>
@@ -227,37 +253,42 @@ const ControlPanel = ({
               </div>
             </div>
           )}
-
+      
           {/* Style Dropdown */}
           <div>
             <label className="block mb-2 text-xs font-medium tracking-wide uppercase md:mb-3 md:text-sm">Style</label>
-            <select
+            <CustomSelect
+              options={[
+                { value: 'Floyd-Steinberg', label: 'Floyd-Steinberg' },
+                { value: 'Atkinson', label: 'Atkinson' },
+                { value: 'Smooth Diffuse', label: 'Smooth Diffuse' },
+              ]}
               value={settings.style}
-              onChange={(e) => handleSelectChange('style', e.target.value)}
-              className="w-full px-3 py-1.5 md:py-2 text-xs md:text-sm bg-white border border-gray-200 focus:border-black focus:outline-none transition-all duration-300"
-            >
-              <option value="Floyd-Steinberg">Floyd-Steinberg</option>
-              <option value="Atkinson">Atkinson</option>
-              <option value="Smooth Diffuse">Smooth Diffuse</option>
-            </select>
+              onChange={val => handleSelectChange('style', val)}
+              className="w-full"
+            />
           </div>
-
+          <div className="slider-separator"></div>
           {/* Presets Dropdown */}
           <div>
             <label className="block mb-2 text-xs font-medium tracking-wide uppercase md:mb-3 md:text-sm">Presets</label>
-            <select
-              className="w-full px-3 py-1.5 md:py-2 text-xs md:text-sm bg-white border border-gray-200 focus:border-black focus:outline-none transition-all duration-300"
+            <CustomSelect
+              options={[{ value: 'none', label: 'None' }]}
+              value={'none'}
+              onChange={() => { }}
+              className="w-full text-xs md:text-sm"
               disabled
-            >
-              <option>None</option>
-            </select>
+            />
           </div>
 
+          <div className="slider-separator"></div>
+
           {/* Scale Slider */}
-          <div className="slider-container">
-            <label className="block mb-2 text-xs font-medium tracking-wide uppercase md:mb-3 md:text-sm">
-              Scale: {settings.scale}
-            </label>
+          <div className="mb-8 slider-container">
+            <div className="flex justify-between mb-1">
+              <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Scale</label>
+              <span className="text-xs font-medium md:text-sm">{settings.scale}</span>
+            </div>
             <input
               type="range"
               min="0.1"
@@ -266,14 +297,17 @@ const ControlPanel = ({
               value={settings.scale}
               onChange={(e) => handleSliderChange('scale', e.target.value)}
               className="slider"
+              style={getSliderBg(settings.scale, 0.1, 1)}
             />
           </div>
+          <div className="slider-separator"></div>
 
           {/* Smoothness Slider */}
-          <div className="slider-container">
-            <label className="block mb-2 text-xs font-medium tracking-wide uppercase md:mb-3 md:text-sm">
-              Smoothness: {settings.smoothness}
-            </label>
+          <div className="mb-8 slider-container">
+            <div className="flex justify-between mb-1">
+              <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Smoothness</label>
+              <span className="text-xs font-medium md:text-sm">{settings.smoothness}</span>
+            </div>
             <input
               type="range"
               min="0"
@@ -282,14 +316,17 @@ const ControlPanel = ({
               value={settings.smoothness}
               onChange={(e) => handleSliderChange('smoothness', e.target.value)}
               className="slider"
+              style={getSliderBg(settings.smoothness, 0, 10)}
             />
           </div>
+          <div className="slider-separator"></div>
 
           {/* Contrast Slider */}
-          <div className="slider-container">
-            <label className="block mb-2 text-xs font-medium tracking-wide uppercase md:mb-3 md:text-sm">
-              Contrast: {settings.contrast}
-            </label>
+          <div className="mb-8 slider-container">
+            <div className="flex justify-between mb-1">
+              <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Contrast</label>
+              <span className="text-xs font-medium md:text-sm">{settings.contrast}</span>
+            </div>
             <input
               type="range"
               min="-100"
@@ -298,14 +335,17 @@ const ControlPanel = ({
               value={settings.contrast}
               onChange={(e) => handleSliderChange('contrast', e.target.value)}
               className="slider"
+              style={getSliderBg(settings.contrast, -100, 100)}
             />
           </div>
+          <div className="slider-separator"></div>
 
           {/* Midtones Slider */}
-          <div className="slider-container">
-            <label className="block mb-2 text-xs font-medium tracking-wide uppercase md:mb-3 md:text-sm">
-              Midtones: {settings.midtones}
-            </label>
+          <div className="mb-8 slider-container">
+            <div className="flex justify-between mb-1">
+              <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Midtones</label>
+              <span className="text-xs font-medium md:text-sm">{settings.midtones}</span>
+            </div>
             <input
               type="range"
               min="0"
@@ -314,14 +354,17 @@ const ControlPanel = ({
               value={settings.midtones}
               onChange={(e) => handleSliderChange('midtones', e.target.value)}
               className="slider"
+              style={getSliderBg(settings.midtones, 0, 100)}
             />
           </div>
+          <div className="slider-separator"></div>
 
           {/* Highlights Slider */}
-          <div className="slider-container">
-            <label className="block mb-2 text-xs font-medium tracking-wide uppercase md:mb-3 md:text-sm">
-              Highlights: {settings.highlights}
-            </label>
+          <div className="mb-8 slider-container">
+            <div className="flex justify-between mb-1">
+              <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Highlights</label>
+              <span className="text-xs font-medium md:text-sm">{settings.highlights}</span>
+            </div>
             <input
               type="range"
               min="0"
@@ -330,14 +373,17 @@ const ControlPanel = ({
               value={settings.highlights}
               onChange={(e) => handleSliderChange('highlights', e.target.value)}
               className="slider"
+              style={getSliderBg(settings.highlights, 0, 100)}
             />
           </div>
+          <div className="slider-separator"></div>
 
           {/* Luminance Threshold Slider */}
-          <div className="slider-container">
-            <label className="block mb-2 text-xs font-medium tracking-wide uppercase md:mb-3 md:text-sm">
-              Luminance Threshold: {settings.luminanceThreshold}
-            </label>
+          <div className="mb-8 slider-container">
+            <div className="flex justify-between mb-1">
+              <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Luminance Threshold</label>
+              <span className="text-xs font-medium md:text-sm">{settings.luminanceThreshold}</span>
+            </div>
             <input
               type="range"
               min="0"
@@ -346,25 +392,29 @@ const ControlPanel = ({
               value={settings.luminanceThreshold}
               onChange={(e) => handleSliderChange('luminanceThreshold', e.target.value)}
               className="slider"
+              style={getSliderBg(settings.luminanceThreshold, 0, 100)}
             />
           </div>
+          <div className="slider-separator"></div>
 
           {/* Blur Slider */}
-          <div className="slider-container">
-            <label className="block mb-2 text-xs font-medium tracking-wide uppercase md:mb-3 md:text-sm">
-              Blur: {settings.blur}
-            </label>
+          <div className="mb-8 slider-container">
+            <div className="flex justify-between mb-1">
+              <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Blur</label>
+              <span className="text-xs font-medium md:text-sm">{settings.blur}</span>
+            </div>
             <input
               type="range"
               min="0"
               max="10"
-              step="0.1"
+              step="1"
               value={settings.blur}
               onChange={(e) => handleSliderChange('blur', e.target.value)}
               className="slider"
+              style={getSliderBg(settings.blur, 0, 10)}
             />
           </div>
-
+          <div className="slider-separator"></div>
           {/* Invert Toggle */}
           <div className="flex items-center space-x-3">
             <input
@@ -372,7 +422,7 @@ const ControlPanel = ({
               id="invert"
               checked={settings.invert}
               onChange={(e) => handleToggleChange('invert', e.target.checked)}
-              className="w-4 h-4 border-gray-200 rounded-none focus:ring-black focus:ring-offset-0"
+              className="w-4 h-4 rounded-none border-gray-200 focus:ring-black focus:ring-offset-0"
             />
             <label htmlFor="invert" className="text-xs font-medium tracking-wide uppercase md:text-sm">
               Invert
