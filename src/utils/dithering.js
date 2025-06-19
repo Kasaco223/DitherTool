@@ -20,9 +20,9 @@ function applyToneAdjustments(value, midtones, highlights) {
     adjusted = 1 - Math.pow((1 - normalizedValue) * 2, 2 - midtones / 50) / 2
   }
   
-  // Apply highlights adjustment (Comentado para evitar que el fondo se blanquee cuando 'highlights' es bajo)
-  // const highlightsFactor = highlights / 100
-  // adjusted = adjusted * highlightsFactor + (1 - highlightsFactor)
+  // Aplicar highlights
+  const highlightsFactor = highlights / 100;
+  adjusted = adjusted * highlightsFactor + (1 - highlightsFactor);
   
   return Math.max(0, Math.min(255, adjusted * 255))
 }
@@ -382,7 +382,9 @@ export function applyAtkinson(imageData, settings) {
     invert,
     useCustomColors,
     customNeonColors,
-    scale
+    scale,
+    smoothness,
+    blur
   } = settings
 
   // Determine the active neon color once per function call
@@ -400,7 +402,7 @@ export function applyAtkinson(imageData, settings) {
   const width = imageData.width
   const height = imageData.height
 
-  // Apply scale by resizing the processing area (similar to Floyd-Steinberg)
+  // Apply scale by resizing the processing area
   const scaledWidth = Math.floor(width * scale);
   const scaledHeight = Math.floor(height * scale);
 
@@ -432,6 +434,34 @@ export function applyAtkinson(imageData, settings) {
     originalRgbForHue[i] = processedData[i];
   }
 
+  // --- BLUR ---
+  if (blur > 0) {
+    const blurRadius = Math.ceil(blur);
+    const tempData = new Uint8ClampedArray(processedData);
+    for (let y = 0; y < processedHeight; y++) {
+      for (let x = 0; x < processedWidth; x++) {
+        let r = 0, g = 0, b = 0, count = 0;
+        for (let dy = -blurRadius; dy <= blurRadius; dy++) {
+          for (let dx = -blurRadius; dx <= blurRadius; dx++) {
+            const ny = y + dy;
+            const nx = x + dx;
+            if (ny >= 0 && ny < processedHeight && nx >= 0 && nx < processedWidth) {
+              const idx = (ny * processedWidth + nx) * 4;
+              r += tempData[idx];
+              g += tempData[idx + 1];
+              b += tempData[idx + 2];
+              count++;
+            }
+          }
+        }
+        const idx = (y * processedWidth + x) * 4;
+        processedData[idx] = r / count;
+        processedData[idx + 1] = g / count;
+        processedData[idx + 2] = b / count;
+      }
+    }
+  }
+
   const grayscaleData = new Float32Array(processedWidth * processedHeight)
 
   // Preprocesamiento: convertir a escala de grises y aplicar ajustes
@@ -442,7 +472,6 @@ export function applyAtkinson(imageData, settings) {
 
     let gray = rgbToGrayscale(r, g, b)
     gray = applyContrast(gray, contrast)
-    // Apply tone adjustments ONLY if luminanceThreshold is not 0 (for default black background behavior)
     if (luminanceThreshold !== 0) {
         gray = applyToneAdjustments(gray, midtones, highlights)
     }
@@ -451,37 +480,32 @@ export function applyAtkinson(imageData, settings) {
     grayscaleData[i / 4] = gray
   }
 
+  // --- SMOOTHNESS ---
+  const errorFactor = 1 - (smoothness / 10);
+
   // Atkinson dithering
-  // Using luminanceThreshold as the primary binarization threshold
-  const threshold = 255 - (luminanceThreshold / 100) * 255; // Map 0-100 inverted to 0-255
+  const threshold = 255 - (luminanceThreshold / 100) * 255;
 
   for (let y = 0; y < processedHeight; y++) {
     for (let x = 0; x < processedWidth; x++) {
       const idx = y * processedWidth + x
       const oldPixel = grayscaleData[idx]
       let newPixel;
-      // Special binarization for luminanceThreshold 0: pixels brighter than 240 become black (background), others (<240) white (particles)
       if (luminanceThreshold === 0) {
-        newPixel = oldPixel > 240 ? 0 : 255; // If very bright (>240), make black (background), else make white (particles)
+        newPixel = oldPixel > 240 ? 0 : 255;
       } else {
-        newPixel = oldPixel < threshold ? 0 : 255; // Standard binarization: darker than threshold becomes black, brighter becomes white
+        newPixel = oldPixel < threshold ? 0 : 255;
       }
-      const error = oldPixel - newPixel
-
-      grayscaleData[idx] = newPixel
-
-      // Atkinson error diffusion pattern (simplified weights summing to 8/8 = 1)
-      // 1/8  1/8
-      // 1/8  1/8  1/8
-      //      1/8
-      if (x + 1 < processedWidth) grayscaleData[idx + 1] += error * 1 / 8
-      if (x + 2 < processedWidth) grayscaleData[idx + 2] += error * 1 / 8
+      const error = (oldPixel - newPixel) * errorFactor;
+      grayscaleData[idx] = newPixel;
+      if (x + 1 < processedWidth) grayscaleData[idx + 1] += error * 1 / 8;
+      if (x + 2 < processedWidth) grayscaleData[idx + 2] += error * 1 / 8;
       if (y + 1 < processedHeight) {
-        if (x - 1 >= 0) grayscaleData[idx + processedWidth - 1] += error * 1 / 8
-        grayscaleData[idx + processedWidth] += error * 1 / 8
-        if (x + 1 < processedWidth) grayscaleData[idx + processedWidth + 1] += error * 1 / 8
+        if (x - 1 >= 0) grayscaleData[idx + processedWidth - 1] += error * 1 / 8;
+        grayscaleData[idx + processedWidth] += error * 1 / 8;
+        if (x + 1 < processedWidth) grayscaleData[idx + processedWidth + 1] += error * 1 / 8;
       }
-      if (y + 2 < processedHeight) grayscaleData[idx + 2 * processedWidth] += error * 1 / 8
+      if (y + 2 < processedHeight) grayscaleData[idx + 2 * processedWidth] += error * 1 / 8;
     }
   }
 
