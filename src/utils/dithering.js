@@ -344,6 +344,13 @@ export function applyFloydSteinberg(imageData, settings) {
     ctx.imageSmoothingEnabled = false // Keep crisp pixels
     ctx.drawImage(tempCanvas, 0, 0, width, height)
     finalImageData = ctx.getImageData(0, 0, width, height)
+    // --- Aplicar opacidad personalizada al final si corresponde ---
+    if (useCustomColors && customNeonColors && typeof customNeonColors.a === 'number' && customNeonColors.a < 1) {
+      const data = finalImageData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        data[i + 3] = Math.round(data[i + 3] * customNeonColors.a);
+      }
+    }
   } else {
     // Convert back to RGBA for original size with neon colors
     const resultData = new Uint8ClampedArray(preImageData.data.length)
