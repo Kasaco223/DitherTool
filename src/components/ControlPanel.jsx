@@ -177,89 +177,6 @@ const ControlPanel = ({
     };
   }
 
-  const [presets, setPresets] = useState([]);
-  const [showPresetPopup, setShowPresetPopup] = useState(false);
-  const [presetName, setPresetName] = useState('');
-  const [presetError, setPresetError] = useState('');
-  const [selectedPreset, setSelectedPreset] = useState('none');
-  const [presetsLoaded, setPresetsLoaded] = useState(false);
-
-  // Leer presets de localStorage al cargar (solo una vez)
-  useEffect(() => {
-    if (!presetsLoaded) {
-      const saved = localStorage.getItem(PRESETS_KEY);
-      if (saved) {
-        setPresets(JSON.parse(saved));
-      }
-      setPresetsLoaded(true);
-    }
-  }, [presetsLoaded]);
-
-  // Guardar presets en localStorage cuando cambian (solo si ya se cargaron)
-  useEffect(() => {
-    if (presetsLoaded) {
-      localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
-    }
-  }, [presets, presetsLoaded]);
-
-  // Guardar preset
-  const savePreset = () => {
-    if (!presetName.trim()) {
-      setPresetError('Name cannot be empty');
-      return;
-    }
-    if (presets.some(p => p.name === presetName.trim())) {
-      setPresetError('That name already exists');
-      return;
-    }
-    const newPreset = {
-      name: presetName.trim(),
-      settings,
-      useCustomColors,
-      customNeonColors
-    };
-    setPresets([...presets, newPreset]);
-    setShowPresetPopup(false);
-    setPresetName('');
-    setPresetError('');
-  };
-
-  // Aplicar preset
-  const applyPreset = (name) => {
-    const preset = presets.find(p => p.name === name);
-    if (preset) {
-      onSettingsChange(preset.settings);
-      if (preset.useCustomColors !== useCustomColors) {
-        onUseCustomColorsToggle();
-      }
-      safeSetCustomNeonColor(preset.customNeonColors);
-      setSelectedPreset(name);
-    }
-  };
-
-  // Eliminar preset
-  const deletePreset = (name) => {
-    setPresets(presets.filter(p => p.name !== name));
-    if (selectedPreset === name) setSelectedPreset('none');
-  };
-
-  const handleReset = () => {
-    onSettingsChange(DEFAULT_SETTINGS);
-    safeSetCustomNeonColor(DEFAULT_CUSTOM_NEON_COLORS);
-    if (useCustomColors) onUseCustomColorsToggle();
-  };
-
-  const handleSelectPreset = (val) => {
-    setSelectedPreset(val);
-    if (val === 'none') {
-      onSettingsChange(DEFAULT_SETTINGS);
-      safeSetCustomNeonColor(DEFAULT_CUSTOM_NEON_COLORS);
-      if (useCustomColors) onUseCustomColorsToggle();
-      return;
-    }
-    applyPreset(val);
-  };
-
   return (
     <div className="flex flex-col">
       {/* Import/Export Buttons y Minimizar */}
@@ -299,8 +216,10 @@ const ControlPanel = ({
           Export
         </button> */}
       </div>
-      <div className="slider-separator"></div>
+      {/*}
+      <div className="slider-separator"></div>*/}
       {/* Presets Dropdown */}
+      {/*
       <div>
         <label className="block mb-2 text-xs font-medium tracking-wide uppercase md:mb-3 md:text-sm">Presets</label>
         <CustomSelect
@@ -327,11 +246,162 @@ const ControlPanel = ({
           Save Preset
         </button>
       </div>
-      <div className="slider-separator"></div>
+      */}
+      <div className="slider-separator" style={{margin: '6px 0 4px 0', height: '1px'}}></div>
       {/* Settings Panel */}
       <div className="overflow-y-auto control-panel">
-        <div className="space-y-6 md:space-y-8">
-          {/* Custom Colors Toggle */}
+        <div className="space-y-1 md:space-y-2">
+          {/* Style Dropdown */}
+          <div>
+            <label className="block mb-2 text-xs font-medium tracking-wide uppercase md:mb-3 md:text-sm">Style</label>
+            <CustomSelect
+              options={[
+                { value: 'Floyd-Steinberg', label: 'Floyd-Steinberg' },
+                { value: 'Atkinson', label: 'Atkinson' },
+                { value: 'Smooth Diffuse', label: 'Smooth Diffuse' },
+              ]}
+              value={settings.style}
+              onChange={val => handleSelectChange('style', val)}
+              className="w-full"
+            />
+          </div>
+          <div className="slider-separator" style={{margin: '6px 0 4px 0', height: '1px'}}></div>
+
+          {/* Scale Slider */}
+          <div className="mb-0.5 slider-container">
+            <div className="flex justify-between mb-0.5 mt-1">
+              <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Scale</label>
+              <span className="text-xs font-medium md:text-sm">{settings.scale}</span>
+            </div>
+            <input
+              type="range"
+              min="0.1"
+              max="1"
+              step="0.1"
+              value={settings.scale}
+              onChange={(e) => handleSliderChange('scale', e.target.value)}
+              className="slider"
+              style={getSliderBg(settings.scale, 0.1, 1)}
+            />
+          </div>
+          <div className="slider-separator" style={{margin: '6px 0 4px 0', height: '1px'}}></div>
+
+          {/* Smoothness Slider */}
+          <div className="mb-0.5 slider-container">
+            <div className="flex justify-between mb-0.5 mt-1">
+              <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Smoothness</label>
+              <span className="text-xs font-medium md:text-sm">{settings.smoothness}</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="10"
+              step="1"
+              value={settings.smoothness}
+              onChange={(e) => handleSliderChange('smoothness', e.target.value)}
+              className="slider"
+              style={getSliderBg(settings.smoothness, 0, 10)}
+            />
+          </div>
+          <div className="slider-separator" style={{margin: '6px 0 4px 0', height: '1px'}}></div>
+
+          {/* Contrast Slider */}
+          <div className="mb-0.5 slider-container">
+            <div className="flex justify-between mb-0.5 mt-1">
+              <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Contrast</label>
+              <span className="text-xs font-medium md:text-sm">{settings.contrast}</span>
+            </div>
+            <input
+              type="range"
+              min="-100"
+              max="100"
+              step="1"
+              value={settings.contrast}
+              onChange={(e) => handleSliderChange('contrast', e.target.value)}
+              className="slider"
+              style={getSliderBg(settings.contrast, -100, 100)}
+            />
+          </div>
+          <div className="slider-separator" style={{margin: '6px 0 4px 0', height: '1px'}}></div>
+
+          {/* Midtones Slider */}
+          <div className="mb-0.5 slider-container">
+            <div className="flex justify-between mb-0.5 mt-1">
+              <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Midtones</label>
+              <span className="text-xs font-medium md:text-sm">{settings.midtones}</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value={settings.midtones}
+              onChange={(e) => handleSliderChange('midtones', e.target.value)}
+              className="slider"
+              style={getSliderBg(settings.midtones, 0, 100)}
+            />
+          </div>
+          <div className="slider-separator" style={{margin: '6px 0 4px 0', height: '1px'}}></div>
+
+          {/* Highlights Slider */}
+          <div className="mb-0.5 slider-container">
+            <div className="flex justify-between mb-0.5 mt-1">
+              <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Highlights</label>
+              <span className="text-xs font-medium md:text-sm">{settings.highlights}</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value={settings.highlights}
+              onChange={(e) => handleSliderChange('highlights', e.target.value)}
+              className="slider"
+              style={getSliderBg(settings.highlights, 0, 100)}
+            />
+          </div>
+          <div className="slider-separator" style={{margin: '6px 0 4px 0', height: '1px'}}></div>
+
+          {/* Luminance Threshold Slider */}
+          <div className="mb-0.5 slider-container">
+            <div className="flex justify-between mb-0.5 mt-1">
+              <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Luminance Threshold</label>
+              <span className="text-xs font-medium md:text-sm">{settings.luminanceThreshold}</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value={settings.luminanceThreshold}
+              onChange={(e) => handleSliderChange('luminanceThreshold', e.target.value)}
+              className="slider"
+              style={getSliderBg(settings.luminanceThreshold, 0, 100)}
+            />
+          </div>
+          <div className="slider-separator" style={{margin: '6px 0 4px 0', height: '1px'}}></div>
+
+          {/* Blur Slider */}
+          <div className="mb-0.5 slider-container">
+            <div className="flex justify-between mb-0.5 mt-1">
+              <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Blur</label>
+              <span className="text-xs font-medium md:text-sm">{settings.blur}</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="10"
+              step="1"
+              value={settings.blur}
+              onChange={(e) => handleSliderChange('blur', e.target.value)}
+              className="slider"
+              style={getSliderBg(settings.blur, 0, 10)}
+            />
+          </div>
+          <div className="slider-separator" style={{margin: '6px 0 4px 0', height: '1px'}}></div>
+        </div>
+        {/* --- BLOQUE CUSTOM COLORS ABAJO --- */}
+        <div className="mt-1">
           <div className="flex items-center space-x-3">
             <input
               type="checkbox"
@@ -344,12 +414,8 @@ const ControlPanel = ({
               Use Custom Colors
             </label>
           </div>
-
-
-          {/* Custom Color Selector (conditionally rendered) */}
           {useCustomColors && (
             <div className="pt-4">
-              {/* Picker sin slider de opacidad */}
               <div className="mx-auto" style={{ width: 210, height: 210 }}>
                 <HsvaColorPicker
                   color={{ ...customNeonColors, a: 1 }}
@@ -358,8 +424,7 @@ const ControlPanel = ({
                   alpha={false}
                 />
               </div>
-              {/* Bloque de opacidad debajo del picker, input alineado a la derecha */}
-              <div className="flex items-center mt-4 mb-2 w-full">
+              <div className="flex items-center mt-1 mb-0.5 w-full">
                 <label htmlFor="alpha-input" className="flex-1 text-xs font-medium tracking-wide text-left uppercase md:text-sm">Opacity</label>
                 <input
                   id="alpha-input"
@@ -376,7 +441,6 @@ const ControlPanel = ({
                 />
                 <span className="text-xs">%</span>
               </div>
-              {/* Slider de opacidad igual a los demás sliders, fuera del contenedor de 210px */}
               <input
                 type="range"
                 min={0}
@@ -390,7 +454,7 @@ const ControlPanel = ({
                 className="w-full slider"
                 style={getSliderBg(Math.round((customNeonColors.a ?? 1) * 100), 0, 100)}
               />
-              <div className="flex flex-col mt-4 space-y-2">
+              <div className="flex flex-col mt-1 space-y-0.5">
                 <CustomSelect
                   options={[
                     { value: 'HEX', label: 'HEX' },
@@ -418,8 +482,7 @@ const ControlPanel = ({
                   </button>
                 </div>
               </div>
-              {/* Invert Toggle */}
-              <div className="flex items-center mt-4 space-x-3">
+              <div className="flex items-center mt-1 space-x-1">
                 <input
                   type="checkbox"
                   id="invert"
@@ -431,199 +494,21 @@ const ControlPanel = ({
                   Invert
                 </label>
               </div>
-              <div className="slider-separator"></div>
             </div>
           )}
-           <div className="slider-separator"></div>
-          {/* Style Dropdown */}
-          <div>
-            <label className="block mb-2 text-xs font-medium tracking-wide uppercase md:mb-3 md:text-sm">Style</label>
-            <CustomSelect
-              options={[
-                { value: 'Floyd-Steinberg', label: 'Floyd-Steinberg' },
-                { value: 'Atkinson', label: 'Atkinson' },
-                { value: 'Smooth Diffuse', label: 'Smooth Diffuse' },
-              ]}
-              value={settings.style}
-              onChange={val => handleSelectChange('style', val)}
-              className="w-full"
-            />
-          </div>
-
-
-          <div className="slider-separator"></div>
-
-          {/* Scale Slider */}
-          <div className="mb-8 slider-container">
-            <div className="flex justify-between mb-1">
-              <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Scale</label>
-              <span className="text-xs font-medium md:text-sm">{settings.scale}</span>
-            </div>
-            <input
-              type="range"
-              min="0.1"
-              max="1"
-              step="0.1"
-              value={settings.scale}
-              onChange={(e) => handleSliderChange('scale', e.target.value)}
-              className="slider"
-              style={getSliderBg(settings.scale, 0.1, 1)}
-            />
-          </div>
-          <div className="slider-separator"></div>
-
-          {/* Smoothness Slider */}
-          <div className="mb-8 slider-container">
-            <div className="flex justify-between mb-1">
-              <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Smoothness</label>
-              <span className="text-xs font-medium md:text-sm">{settings.smoothness}</span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="10"
-              step="1"
-              value={settings.smoothness}
-              onChange={(e) => handleSliderChange('smoothness', e.target.value)}
-              className="slider"
-              style={getSliderBg(settings.smoothness, 0, 10)}
-            />
-          </div>
-          <div className="slider-separator"></div>
-
-          {/* Contrast Slider */}
-          <div className="mb-8 slider-container">
-            <div className="flex justify-between mb-1">
-              <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Contrast</label>
-              <span className="text-xs font-medium md:text-sm">{settings.contrast}</span>
-            </div>
-            <input
-              type="range"
-              min="-100"
-              max="100"
-              step="1"
-              value={settings.contrast}
-              onChange={(e) => handleSliderChange('contrast', e.target.value)}
-              className="slider"
-              style={getSliderBg(settings.contrast, -100, 100)}
-            />
-          </div>
-          <div className="slider-separator"></div>
-
-          {/* Midtones Slider */}
-          <div className="mb-8 slider-container">
-            <div className="flex justify-between mb-1">
-              <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Midtones</label>
-              <span className="text-xs font-medium md:text-sm">{settings.midtones}</span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              step="1"
-              value={settings.midtones}
-              onChange={(e) => handleSliderChange('midtones', e.target.value)}
-              className="slider"
-              style={getSliderBg(settings.midtones, 0, 100)}
-            />
-          </div>
-          <div className="slider-separator"></div>
-
-          {/* Highlights Slider */}
-          <div className="mb-8 slider-container">
-            <div className="flex justify-between mb-1">
-              <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Highlights</label>
-              <span className="text-xs font-medium md:text-sm">{settings.highlights}</span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              step="1"
-              value={settings.highlights}
-              onChange={(e) => handleSliderChange('highlights', e.target.value)}
-              className="slider"
-              style={getSliderBg(settings.highlights, 0, 100)}
-            />
-          </div>
-          <div className="slider-separator"></div>
-
-          {/* Luminance Threshold Slider */}
-          <div className="mb-8 slider-container">
-            <div className="flex justify-between mb-1">
-              <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Luminance Threshold</label>
-              <span className="text-xs font-medium md:text-sm">{settings.luminanceThreshold}</span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              step="1"
-              value={settings.luminanceThreshold}
-              onChange={(e) => handleSliderChange('luminanceThreshold', e.target.value)}
-              className="slider"
-              style={getSliderBg(settings.luminanceThreshold, 0, 100)}
-            />
-          </div>
-          <div className="slider-separator"></div>
-
-          {/* Blur Slider */}
-          <div className="mb-8 slider-container">
-            <div className="flex justify-between mb-1">
-              <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Blur</label>
-              <span className="text-xs font-medium md:text-sm">{settings.blur}</span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="10"
-              step="1"
-              value={settings.blur}
-              onChange={(e) => handleSliderChange('blur', e.target.value)}
-              className="slider"
-              style={getSliderBg(settings.blur, 0, 10)}
-            />
-          </div>
-          <div className="slider-separator"></div>
         </div>
       </div>
       {/* Botón RESET ALL al final */}
       <button
-        onClick={handleReset}
+        onClick={() => {
+          onSettingsChange(DEFAULT_SETTINGS);
+          safeSetCustomNeonColor(DEFAULT_CUSTOM_NEON_COLORS);
+          if (useCustomColors) onUseCustomColorsToggle();
+        }}
         className="w-full px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm uppercase tracking-wider border border-black text-black bg-white hover:bg-gray-100 mt-8"
       >
         RESET ALL
       </button>
-      {/* Popup para nombre de preset */}
-      {showPresetPopup && (
-        <div className="flex fixed inset-0 z-50 justify-center items-center bg-black bg-opacity-40">
-          <div className="bg-white p-6 rounded-none border border-black flex flex-col items-center min-w-[260px]">
-            <h2 className="mb-4 text-lg font-medium">Preset name</h2>
-            <input
-              type="text"
-              value={presetName}
-              onChange={e => { setPresetName(e.target.value); setPresetError(''); }}
-              className="px-2 py-1 mb-2 w-full text-center border border-black"
-              autoFocus
-            />
-            {presetError && <div className="mb-2 text-xs text-red-600">{presetError}</div>}
-            <div className="flex gap-2 mt-2">
-              <button
-                onClick={savePreset}
-                className="px-4 py-1 text-white bg-black rounded-none border border-black hover:bg-gray-800"
-              >
-                Save
-              </button>
-          <button
-                onClick={() => { setShowPresetPopup(false); setPresetName(''); setPresetError(''); }}
-                className="px-4 py-1 text-black bg-white rounded-none border border-black hover:bg-gray-100"
-          >
-                Cancel
-          </button>
-        </div>
-      </div>
-        </div>
-      )}
     </div>
   )
 }

@@ -2,11 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'BehanceCustom';
+  src: url('/behance-637fcf6671b62.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Custom styles for the dithering tool */
 body {
   background-color: #ffffff;
   color: #000000;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'BehanceCustom', 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -117,4 +125,8 @@ h1, h2, h3 {
 
 .react-colorful__alpha {
   display: none !important;
+}
+
+button, input, select, textarea, h1, h2, h3, h4, h5, h6, p, span, label, div {
+  font-family: 'BehanceCustom', 'Inter', system-ui, sans-serif !important;
 }
