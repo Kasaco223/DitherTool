@@ -211,18 +211,51 @@ const ControlPanel = ({
             </label>
           </div>
 
-          <div className="slider-separator"></div>
 
           {/* Custom Color Selector (conditionally rendered) */}
           {useCustomColors && (
             <div className="pt-4">
+              {/* Picker sin slider de opacidad */}
               <div className="mx-auto" style={{ width: 210, height: 210 }}>
                 <HsvaColorPicker
-                  color={{ ...customNeonColors, a: 1 }} // Add alpha for the picker
-                  onChange={(newColor) => setCustomNeonColor({ h: newColor.h, s: newColor.s, v: newColor.v })}
+                  color={{ ...customNeonColors, a: 1 }}
+                  onChange={(newColor) => setCustomNeonColor({ ...newColor, a: customNeonColors.a ?? 1 })}
                   style={{ width: '100%', height: '100%' }}
+                  alpha={false}
                 />
               </div>
+              {/* Bloque de opacidad debajo del picker, input alineado a la derecha */}
+              <div className="flex items-center mt-4 mb-2 w-full">
+                <label htmlFor="alpha-input" className="flex-1 text-xs font-medium tracking-wide text-left uppercase md:text-sm">Opacidad</label>
+                <input
+                  id="alpha-input"
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={Math.round((customNeonColors.a ?? 1) * 100)}
+                  onChange={e => {
+                    let val = Math.max(0, Math.min(100, Number(e.target.value)));
+                    setCustomNeonColor({ ...customNeonColors, a: val / 100 });
+                  }}
+                  className="px-2 py-1 mx-2 w-16 text-xs text-right border border-black"
+                />
+                <span className="text-xs">%</span>
+              </div>
+              {/* Slider de opacidad igual a los demás sliders, fuera del contenedor de 210px */}
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={Math.round((customNeonColors.a ?? 1) * 100)}
+                onChange={e => {
+                  let val = Math.max(0, Math.min(100, Number(e.target.value)));
+                  setCustomNeonColor({ ...customNeonColors, a: val / 100 });
+                }}
+                className="w-full slider"
+                style={getSliderBg(Math.round((customNeonColors.a ?? 1) * 100), 0, 100)}
+              />
               <div className="flex flex-col mt-4 space-y-2">
                 <CustomSelect
                   options={[
@@ -251,9 +284,22 @@ const ControlPanel = ({
                   </button>
                 </div>
               </div>
+              {/* Invert Toggle */}
+              <div className="flex items-center mt-4 space-x-3">
+                <input
+                  type="checkbox"
+                  id="invert"
+                  checked={settings.invert}
+                  onChange={(e) => handleToggleChange('invert', e.target.checked)}
+                  className="w-4 h-4 rounded-none border-gray-200 focus:ring-black focus:ring-offset-0"
+                />
+                <label htmlFor="invert" className="text-xs font-medium tracking-wide uppercase md:text-sm">
+                  Invert
+                </label>
+              </div>
+              <div className="slider-separator"></div>
             </div>
           )}
-      
           {/* Style Dropdown */}
           <div>
             <label className="block mb-2 text-xs font-medium tracking-wide uppercase md:mb-3 md:text-sm">Style</label>
@@ -414,20 +460,7 @@ const ControlPanel = ({
               style={getSliderBg(settings.blur, 0, 10)}
             />
           </div>
-          <div className="slider-separator"></div>
-          {/* Invert Toggle */}
-          <div className="flex items-center space-x-3">
-            <input
-              type="checkbox"
-              id="invert"
-              checked={settings.invert}
-              onChange={(e) => handleToggleChange('invert', e.target.checked)}
-              className="w-4 h-4 rounded-none border-gray-200 focus:ring-black focus:ring-offset-0"
-            />
-            <label htmlFor="invert" className="text-xs font-medium tracking-wide uppercase md:text-sm">
-              Invert
-            </label>
-          </div>
+
         </div>
 
         {/* Save Preset Button */}

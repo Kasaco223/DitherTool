@@ -279,8 +279,8 @@ export function applyFloydSteinberg(imageData, settings) {
       const grayValue = grayscaleData[i];
       const outputPixelIdx = i * 4;
 
-      // Binarize float grayValue to 0 or 255 for final output (using 128 as midpoint)
-      if (grayValue > 128) { // If value is closer to white, make it white/neon
+      const isParticle = invert ? grayValue <= 128 : grayValue > 128;
+      if (isParticle) {
         let r, g, b;
 
         if (activeNeonColor) { // Use the determined active neon color
@@ -289,14 +289,26 @@ export function applyFloydSteinberg(imageData, settings) {
           r = 255; g = 255; b = 255; // Blanco
         }
 
+        if (useCustomColors && invert) {
+          r = 255 - r;
+          g = 255 - g;
+          b = 255 - b;
+        }
+
         tempColoredData[outputPixelIdx] = r;
         tempColoredData[outputPixelIdx + 1] = g;
         tempColoredData[outputPixelIdx + 2] = b;
         tempColoredData[outputPixelIdx + 3] = 255; // Completamente opaco
       } else {
-        tempColoredData[outputPixelIdx] = 0;
-        tempColoredData[outputPixelIdx + 1] = 0;
-        tempColoredData[outputPixelIdx + 2] = 0;
+        if (useCustomColors && invert) {
+          tempColoredData[outputPixelIdx] = 0;
+          tempColoredData[outputPixelIdx + 1] = 0;
+          tempColoredData[outputPixelIdx + 2] = 0;
+        } else {
+          tempColoredData[outputPixelIdx] = 0;
+          tempColoredData[outputPixelIdx + 1] = 0;
+          tempColoredData[outputPixelIdx + 2] = 0;
+        }
         tempColoredData[outputPixelIdx + 3] = 255; // Completamente opaco
       }
     }
@@ -315,8 +327,8 @@ export function applyFloydSteinberg(imageData, settings) {
       const grayValue = grayscaleData[i];
       const outputPixelIdx = i * 4;
 
-      // Binarize float grayValue to 0 or 255 for final output (using 128 as midpoint)
-      if (grayValue > 128) { // If value is closer to white, make it white/neon
+      const isParticle = invert ? grayValue <= 128 : grayValue > 128;
+      if (isParticle) {
         let r, g, b;
 
         if (activeNeonColor) { // Use the determined active neon color
@@ -325,14 +337,30 @@ export function applyFloydSteinberg(imageData, settings) {
           r = 255; g = 255; b = 255; // Blanco
         }
 
+        if (useCustomColors && invert) {
+          r = 255 - r;
+          g = 255 - g;
+          b = 255 - b;
+        }
+
         resultData[outputPixelIdx] = r;
         resultData[outputPixelIdx + 1] = g;
         resultData[outputPixelIdx + 2] = b;
-        resultData[outputPixelIdx + 3] = 255; // Completamente opaco
+        if (useCustomColors && typeof customNeonColors.a === 'number') {
+          resultData[outputPixelIdx + 3] = Math.round(customNeonColors.a * 255);
+        } else {
+          resultData[outputPixelIdx + 3] = 255;
+        }
       } else {
-        resultData[outputPixelIdx] = 0;
-        resultData[outputPixelIdx + 1] = 0;
-        resultData[outputPixelIdx + 2] = 0;
+        if (useCustomColors && invert) {
+          resultData[outputPixelIdx] = 0;
+          resultData[outputPixelIdx + 1] = 0;
+          resultData[outputPixelIdx + 2] = 0;
+        } else {
+          resultData[outputPixelIdx] = 0;
+          resultData[outputPixelIdx + 1] = 0;
+          resultData[outputPixelIdx + 2] = 0;
+        }
         resultData[outputPixelIdx + 3] = 255; // Completamente opaco
       }
     }
@@ -463,8 +491,8 @@ export function applyAtkinson(imageData, settings) {
     const grayValue = grayscaleData[i];
     const outputPixelIdx = i * 4;
 
-    // Binarize float grayValue to 0 or 255 for final output (using 128 as midpoint)
-    if (grayValue > 128) { // If value is closer to white, make it white/neon
+    const isParticle = invert ? grayValue <= 128 : grayValue > 128;
+    if (isParticle) {
       let r, g, b;
 
       if (activeNeonColor) { // Use the determined active neon color
@@ -473,14 +501,30 @@ export function applyAtkinson(imageData, settings) {
         r = 255; g = 255; b = 255; // Blanco
       }
 
+      if (useCustomColors && invert) {
+        r = 255 - r;
+        g = 255 - g;
+        b = 255 - b;
+      }
+
       resultData[outputPixelIdx] = r;
       resultData[outputPixelIdx + 1] = g;
       resultData[outputPixelIdx + 2] = b;
-      resultData[outputPixelIdx + 3] = 255; // Completamente opaco
+      if (useCustomColors && typeof customNeonColors.a === 'number') {
+        resultData[outputPixelIdx + 3] = Math.round(customNeonColors.a * 255);
+      } else {
+        resultData[outputPixelIdx + 3] = 255;
+      }
     } else {
-      resultData[outputPixelIdx] = 0;
-      resultData[outputPixelIdx + 1] = 0;
-      resultData[outputPixelIdx + 2] = 0;
+      if (useCustomColors && invert) {
+        resultData[outputPixelIdx] = 0;
+        resultData[outputPixelIdx + 1] = 0;
+        resultData[outputPixelIdx + 2] = 0;
+      } else {
+        resultData[outputPixelIdx] = 0;
+        resultData[outputPixelIdx + 1] = 0;
+        resultData[outputPixelIdx + 2] = 0;
+      }
       resultData[outputPixelIdx + 3] = 255; // Completamente opaco
     }
   }
@@ -665,16 +709,36 @@ export function applySmoothDiffuse(imageData, settings) {
           r = 255; g = 255; b = 255; // Blanco
         }
         
+        if (useCustomColors && invert) {
+          r = 255 - r;
+          g = 255 - g;
+          b = 255 - b;
+        }
+        
         resultData[outputPixelIdx] = r;
         resultData[outputPixelIdx + 1] = g;
         resultData[outputPixelIdx + 2] = b;
-        resultData[outputPixelIdx + 3] = 255; // Completamente opaco
+        if (useCustomColors && typeof customNeonColors.a === 'number') {
+          resultData[outputPixelIdx + 3] = Math.round(customNeonColors.a * 255);
+        } else {
+          resultData[outputPixelIdx + 3] = 255;
+        }
       } else {
-        // All non-edge pixels become black for line art effect
-        resultData[outputPixelIdx] = 0;
-        resultData[outputPixelIdx + 1] = 0;
-        resultData[outputPixelIdx + 2] = 0;
-        resultData[outputPixelIdx + 3] = 255; // Fondo negro
+        // All non-edge pixels become fondo correcto
+        if (useCustomColors && invert) {
+          resultData[outputPixelIdx] = 0; // fondo negro
+          resultData[outputPixelIdx + 1] = 0;
+          resultData[outputPixelIdx + 2] = 0;
+        } else if (!useCustomColors && invert) {
+          resultData[outputPixelIdx] = 255; // fondo blanco
+          resultData[outputPixelIdx + 1] = 255;
+          resultData[outputPixelIdx + 2] = 255;
+        } else {
+          resultData[outputPixelIdx] = 0; // fondo negro
+          resultData[outputPixelIdx + 1] = 0;
+          resultData[outputPixelIdx + 2] = 0;
+        }
+        resultData[outputPixelIdx + 3] = 255; // Fondo
       }
     }
   }

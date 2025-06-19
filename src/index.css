@@ -114,3 +114,7 @@ h1, h2, h3 {
 * {
   transition: all 0.3s ease;
 }
+
+.react-colorful__alpha {
+  display: none !important;
+}
