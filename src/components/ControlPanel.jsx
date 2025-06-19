@@ -52,6 +52,21 @@ function stringToHsl(str) {
   return [parseInt(match[1]), parseInt(match[2]), parseInt(match[3])]
 }
 
+const PRESETS_KEY = 'dither_tool_presets_v1';
+
+const DEFAULT_SETTINGS = {
+  scale: 1,
+  smoothness: 0,
+  contrast: 0,
+  midtones: 50,
+  highlights: 100,
+  luminanceThreshold: 50,
+  blur: 0,
+  style: 'Floyd-Steinberg',
+  invert: false
+};
+const DEFAULT_CUSTOM_NEON_COLORS = { h: 0, s: 100, v: 100, a: 1 };
+
 const ControlPanel = ({
   settings,
   onSettingsChange,
@@ -154,6 +169,89 @@ const ControlPanel = ({
     };
   }
 
+  const [presets, setPresets] = useState([]);
+  const [showPresetPopup, setShowPresetPopup] = useState(false);
+  const [presetName, setPresetName] = useState('');
+  const [presetError, setPresetError] = useState('');
+  const [selectedPreset, setSelectedPreset] = useState('none');
+  const [presetsLoaded, setPresetsLoaded] = useState(false);
+
+  // Leer presets de localStorage al cargar (solo una vez)
+  useEffect(() => {
+    if (!presetsLoaded) {
+      const saved = localStorage.getItem(PRESETS_KEY);
+      if (saved) {
+        setPresets(JSON.parse(saved));
+      }
+      setPresetsLoaded(true);
+    }
+  }, [presetsLoaded]);
+
+  // Guardar presets en localStorage cuando cambian (solo si ya se cargaron)
+  useEffect(() => {
+    if (presetsLoaded) {
+      localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
+    }
+  }, [presets, presetsLoaded]);
+
+  // Guardar preset
+  const savePreset = () => {
+    if (!presetName.trim()) {
+      setPresetError('Name cannot be empty');
+      return;
+    }
+    if (presets.some(p => p.name === presetName.trim())) {
+      setPresetError('That name already exists');
+      return;
+    }
+    const newPreset = {
+      name: presetName.trim(),
+      settings,
+      useCustomColors,
+      customNeonColors
+    };
+    setPresets([...presets, newPreset]);
+    setShowPresetPopup(false);
+    setPresetName('');
+    setPresetError('');
+  };
+
+  // Aplicar preset
+  const applyPreset = (name) => {
+    const preset = presets.find(p => p.name === name);
+    if (preset) {
+      onSettingsChange(preset.settings);
+      if (preset.useCustomColors !== useCustomColors) {
+        onUseCustomColorsToggle();
+      }
+      setCustomNeonColor(preset.customNeonColors);
+      setSelectedPreset(name);
+    }
+  };
+
+  // Eliminar preset
+  const deletePreset = (name) => {
+    setPresets(presets.filter(p => p.name !== name));
+    if (selectedPreset === name) setSelectedPreset('none');
+  };
+
+  const handleReset = () => {
+    onSettingsChange(DEFAULT_SETTINGS);
+    setCustomNeonColor(DEFAULT_CUSTOM_NEON_COLORS);
+    if (useCustomColors) onUseCustomColorsToggle();
+  };
+
+  const handleSelectPreset = (val) => {
+    setSelectedPreset(val);
+    if (val === 'none') {
+      onSettingsChange(DEFAULT_SETTINGS);
+      setCustomNeonColor(DEFAULT_CUSTOM_NEON_COLORS);
+      if (useCustomColors) onUseCustomColorsToggle();
+      return;
+    }
+    applyPreset(val);
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Import/Export Buttons y Minimizar */}
@@ -194,6 +292,45 @@ const ControlPanel = ({
         </button> */}
       </div>
       <div className="slider-separator"></div>
+      {/* Presets Dropdown */}
+      <div>
+        <label className="block mb-2 text-xs font-medium tracking-wide uppercase md:mb-3 md:text-sm">Presets</label>
+        <CustomSelect
+          options={[
+            { value: 'none', label: 'None', deletable: false },
+            ...presets.map(p => ({ value: p.name, label: p.name, deletable: true }))
+          ]}
+          value={selectedPreset}
+          onChange={handleSelectPreset}
+          className="w-full text-xs md:text-sm"
+        />
+        {selectedPreset !== 'none' && (
+          <button
+            onClick={() => deletePreset(selectedPreset)}
+            className="px-2 py-1 mt-2 w-full text-xs text-red-600 rounded-none border border-red-400 hover:bg-red-50"
+          >
+            Delete preset
+          </button>
+        )}
+         <button
+          onClick={() => setShowPresetPopup(true)}
+          className="w-full px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm uppercase tracking-wider border border-black text-black bg-white hover:bg-gray-100 mt-4"
+        >
+          Save Preset
+        </button>
+      </div>
+      {/* Save Preset & Reset Buttons */}
+      <div className="flex flex-col gap-2 pt-6 mt-6 border-t border-gray-200 md:pt-8 md:mt-8">
+       
+        <button
+          onClick={handleReset}
+          className="w-full px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm uppercase tracking-wider border border-black text-black bg-white hover:bg-gray-100"
+        >
+          RESET ALL
+        </button>
+      </div>
+
+      <div className="slider-separator"></div>
       {/* Settings Panel */}
       <div className="overflow-y-auto flex-1 control-panel">
         <div className="space-y-6 md:space-y-8">
@@ -226,7 +363,7 @@ const ControlPanel = ({
               </div>
               {/* Bloque de opacidad debajo del picker, input alineado a la derecha */}
               <div className="flex items-center mt-4 mb-2 w-full">
-                <label htmlFor="alpha-input" className="flex-1 text-xs font-medium tracking-wide text-left uppercase md:text-sm">Opacidad</label>
+                <label htmlFor="alpha-input" className="flex-1 text-xs font-medium tracking-wide text-left uppercase md:text-sm">Opacity</label>
                 <input
                   id="alpha-input"
                   type="number"
@@ -314,18 +451,7 @@ const ControlPanel = ({
               className="w-full"
             />
           </div>
-          <div className="slider-separator"></div>
-          {/* Presets Dropdown */}
-          <div>
-            <label className="block mb-2 text-xs font-medium tracking-wide uppercase md:mb-3 md:text-sm">Presets</label>
-            <CustomSelect
-              options={[{ value: 'none', label: 'None' }]}
-              value={'none'}
-              onChange={() => { }}
-              className="w-full text-xs md:text-sm"
-              disabled
-            />
-          </div>
+
 
           <div className="slider-separator"></div>
 
@@ -463,16 +589,38 @@ const ControlPanel = ({
 
         </div>
 
-        {/* Save Preset Button */}
-        <div className="pt-6 mt-6 border-t border-gray-200 md:pt-8 md:mt-8">
-          <button
-            disabled
-            className="w-full px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm uppercase tracking-wider border border-gray-200 text-gray-400 cursor-not-allowed"
-          >
-            Save Preset (Coming Soon)
-          </button>
-        </div>
+
       </div>
+      {/* Popup para nombre de preset */}
+      {showPresetPopup && (
+        <div className="flex fixed inset-0 z-50 justify-center items-center bg-black bg-opacity-40">
+          <div className="bg-white p-6 rounded-none border border-black flex flex-col items-center min-w-[260px]">
+            <h2 className="mb-4 text-lg font-medium">Preset name</h2>
+            <input
+              type="text"
+              value={presetName}
+              onChange={e => { setPresetName(e.target.value); setPresetError(''); }}
+              className="px-2 py-1 mb-2 w-full text-center border border-black"
+              autoFocus
+            />
+            {presetError && <div className="mb-2 text-xs text-red-600">{presetError}</div>}
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={savePreset}
+                className="px-4 py-1 text-white bg-black rounded-none border border-black hover:bg-gray-800"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => { setShowPresetPopup(false); setPresetName(''); setPresetError(''); }}
+                className="px-4 py-1 text-black bg-white rounded-none border border-black hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

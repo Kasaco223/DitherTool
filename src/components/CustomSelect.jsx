@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 
-function CustomSelect({ options, value, onChange, placeholder = "Selecciona...", className = "", disabled = false }) {
+function CustomSelect({ options, value, onChange, placeholder = "Selecciona...", className = "", disabled = false, onDeleteOption }) {
   const [open, setOpen] = useState(false);
   const [highlighted, setHighlighted] = useState(-1);
   const ref = useRef(null);
@@ -85,7 +85,7 @@ function CustomSelect({ options, value, onChange, placeholder = "Selecciona...",
       {/* Opciones */}
       {open && !disabled && (
         <ul
-          className="absolute left-0 top-full z-10 w-full bg-white border border-black rounded-none mt-1 shadow-lg max-h-60 overflow-auto"
+          className="overflow-auto absolute left-0 top-full z-10 mt-1 w-full max-h-60 bg-white rounded-none border border-black shadow-lg"
           role="listbox"
         >
           {options.map((opt, i) => (
@@ -94,11 +94,20 @@ function CustomSelect({ options, value, onChange, placeholder = "Selecciona...",
               key={opt.value}
               role="option"
               aria-selected={value === opt.value}
-              className={`px-3 py-2 cursor-pointer ${i === highlighted ? "bg-black text-white" : ""} ${value === opt.value ? "font-bold" : ""}`}
+              className={`px-3 py-2 cursor-pointer flex items-center justify-between ${i === highlighted ? "bg-black text-white" : ""} ${value === opt.value ? "font-bold" : ""}`}
               onMouseEnter={() => setHighlighted(i)}
               onMouseDown={(e) => { e.preventDefault(); handleSelect(opt.value); }}
             >
-              {opt.label}
+              <span>{opt.label}</span>
+              {onDeleteOption && opt.deletable && (
+                <button
+                  className="ml-2 text-xs text-red-600 hover:underline"
+                  onClick={e => { e.stopPropagation(); onDeleteOption(opt.value); }}
+                  tabIndex={-1}
+                >
+                  Eliminar
+                </button>
+              )}
             </li>
           ))}
         </ul>
