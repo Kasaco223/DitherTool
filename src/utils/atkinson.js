@@ -138,7 +138,55 @@ export function applyAtkinson(imageData, settings) {
 
   // Convert back to RGBA with neon colors
   const resultData = new Uint8ClampedArray(processedImageData.data.length);
-  // ... (el resto del pipeline de color y opacidad igual que en dithering.js) ...
+  for (let i = 0; i < grayscaleData.length; i++) {
+    const grayValue = grayscaleData[i];
+    const outputPixelIdx = i * 4;
+
+    const isParticle = invert ? grayValue <= 128 : grayValue > 128;
+    if (isParticle) {
+      let r, g, b;
+
+      if (activeNeonColor) {
+        [r, g, b] = hsvToRgb(activeNeonColor.h, activeNeonColor.s, activeNeonColor.v);
+        // Si el color es blanco puro, lo manejo como 255,255,254
+        if (r === 255 && g === 255 && b === 255) {
+          b = 254;
+        }
+      } else {
+        r = 255; g = 255; b = 255;
+      }
+
+      // EXCEPCIÓN: Si el color custom es blanco puro y está invert, forzar negro puro
+      const isWhite = (activeNeonColor && activeNeonColor.s === 0 && activeNeonColor.v === 100) || (r === 255 && g === 255 && b === 255);
+      if (useCustomColors && invert && isWhite) {
+        r = 0; g = 0; b = 0;
+      } else if (useCustomColors && invert) {
+        r = 255 - r;
+        g = 255 - g;
+        b = 255 - b;
+      }
+
+      resultData[outputPixelIdx] = r;
+      resultData[outputPixelIdx + 1] = g;
+      resultData[outputPixelIdx + 2] = b;
+      if (useCustomColors && typeof customNeonColors.a === 'number') {
+        resultData[outputPixelIdx + 3] = Math.round(customNeonColors.a * 255);
+      } else {
+        resultData[outputPixelIdx + 3] = 255; // Opaco si no es custom color
+      }
+    } else {
+      if (useCustomColors && invert) {
+        resultData[outputPixelIdx] = 0;
+        resultData[outputPixelIdx + 1] = 0;
+        resultData[outputPixelIdx + 2] = 0;
+      } else {
+        resultData[outputPixelIdx] = 0;
+        resultData[outputPixelIdx + 1] = 0;
+        resultData[outputPixelIdx + 2] = 0;
+      }
+      resultData[outputPixelIdx + 3] = 0; // Totalmente transparente
+    }
+  }
 
   // (Asegúrate de copiar todo el pipeline de color, opacidad y escalado si scale !== 1)
 
