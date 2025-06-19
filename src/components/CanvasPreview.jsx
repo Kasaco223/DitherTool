@@ -5,7 +5,9 @@ import React, {
   useRef,
   useState
 } from 'react'
-import { applyFloydSteinberg, applyAtkinson, applySmoothDiffuse } from '../utils/dithering'
+import { applyAtkinson } from '../utils/atkinson'
+import { applySmoothDiffuse } from '../utils/smoothDiffuse'
+import { applyFloydSteinberg } from '../utils/floydSteinberg'
 
 // Debounce hook for performance optimization
 function useDebounce(value, delay) {
