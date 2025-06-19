@@ -262,11 +262,11 @@ const CanvasPreview = forwardRef(({
           />
         ) : (
           <div className="flex flex-col justify-center items-center p-4 w-full h-full md:p-8">
-            <img src="/Upload_Image.svg" alt="Upload" className="mb-0.5 w-5 h-5 md:w-14 md:h-14" />
-            <p className="mb-0.5 text-[8px] tracking-wide text-gray-200 md:text-lg">No image loaded</p>
-            <p className="mb-1 text-[8px] tracking-wide text-gray-400 md:text-sm">Import an image to get started</p>
+            <img src="/Upload_Image.svg" alt="Upload" className="mb-4 w-5 h-5 md:w-14 md:h-14" />
+            <p className="mb-2 text-[8px] tracking-wide text-gray-200 md:text-lg">No image loaded</p>
+            <p className="mb-2 text-[8px] tracking-wide text-gray-400 md:text-sm">Import an image to get started</p>
             <button
-              className="px-1 py-0 text-[8px] md:px-8 md:py-2 md:text-base font-medium border border-black bg-white text-black rounded-none hover:bg-black hover:text-white transition-all duration-200"
+              className="px-1 py-0 text-[8px] md:px-8 md:py-2 md:text-base font-medium border border-black bg-white text-black rounded-none hover:bg-black hover:text-white transition-all duration-200 mt-2 md:mt-4"
               onClick={() => document.querySelector('input[type=file]')?.click()}
             >
               IMPORT IMAGE

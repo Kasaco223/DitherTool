@@ -191,6 +191,14 @@ function App() {
       {/* Side Menu - Controls (desktop) */}
       {!menuMinimized ? (
         <div className={`hidden overflow-y-auto fixed right-0 z-40 w-80 bg-white shadow-lg md:block top-[56px] h-[calc(100vh-56px)]`}>
+          {/* Botón minimizar menú, hijo directo del panel lateral, fuera de ControlPanel */}
+          <button
+            onClick={() => setMenuMinimized(true)}
+            className="flex absolute left-4 top-8 z-10 justify-center items-center p-0 w-6 h-6 text-base font-bold text-black bg-white rounded-none border border-black shadow-none hover:bg-gray-100"
+            title="Minimizar menú"
+          >
+            <span className="block text-xs leading-none" style={{ transform: 'translateY(-1px)' }}>{'>'}</span>
+          </button>
           <div className="flex-1 p-8 mt-10">
             <ControlPanel
               settings={settings}
@@ -203,7 +211,6 @@ function App() {
               customNeonColors={customNeonColors}
                setCustomNeonColor={setCustomNeonColors}
               setShowExportPopup={setShowExportPopup}
-              onMinimizeMenu={() => setMenuMinimized(true)}
             />
           </div>
         </div>
@@ -234,64 +241,40 @@ function App() {
 
       {/* Menú deslizable desde abajo para mobile */}
       {isMobile && isMobileMenuOpen && (
-        <div
-          className="flex overflow-hidden fixed bottom-0 left-0 z-50 flex-col w-full h-1/2 bg-white shadow-lg md:border-t md:border-black"
-          style={{ touchAction: 'pan-y' }}
-        >
-          {/* Header fijo para el menú mobile */}
-          <div className="flex fixed z-10 justify-between items-center px-4 w-full h-12 bg-white" style={{ left: 0, bottom: '50%', minHeight: '48px', maxHeight: '56px', top: 'auto' }}>
-            <span className="text-base font-medium">Menu</span>
-            <button
-              className="flex justify-center items-center w-10 h-10 bg-white rounded-none border border-black shadow"
-              onClick={() => setIsMobileMenuOpen(false)}
-              title="Cerrar menú"
-            >
-              <span className="block text-2xl">{'v'}</span>
-            </button>
-            {/* Isla de zoom/reset sobre la flechita */}
-            <div className="flex absolute right-4 -top-12 z-50 flex-row items-center p-2 space-x-2 bg-white rounded-none border border-black shadow-none">
-              <button
-                onClick={handleZoomIn}
-                className="flex justify-center items-center w-8 h-8 text-lg font-normal text-black bg-white rounded-none border border-black hover:bg-gray-100 focus:outline-none"
-                title="Zoom In"
-              >
-                +
-              </button>
-              <span className="mx-2 text-base font-normal text-black select-none" style={{minWidth: '48px', textAlign: 'center'}}>
-                {`${Math.round(zoom * 100)}%`}
-              </span>
-              <button
-                onClick={handleZoomOut}
-                className="flex justify-center items-center w-8 h-8 text-lg font-normal text-black bg-white rounded-none border border-black hover:bg-gray-100 focus:outline-none"
-                title="Zoom Out"
-              >
-                -
-              </button>
-              <button
-                onClick={handleResetZoom}
-                className="flex justify-center items-center px-3 ml-2 h-8 text-base font-normal text-black bg-white rounded-none border border-black hover:bg-gray-100 focus:outline-none"
-                title="Reset"
-              >
-                RESET
-              </button>
+        <>
+          {/* Botón cerrar menú móvil en la esquina superior derecha del panel, ahora sí flotante y fuera del flujo de la columna */}
+          <button
+            className="flex absolute top-4 right-4 z-50 justify-center items-center p-0 w-6 h-6 text-xs font-bold text-black bg-white rounded-none border border-black shadow-none"
+            onClick={() => setIsMobileMenuOpen(false)}
+            title="Cerrar menú"
+          >
+            <span className="block">{'v'}</span>
+          </button>
+          <div
+            className="flex overflow-hidden fixed relative bottom-0 left-0 z-50 flex-col w-full h-1/2 bg-white shadow-lg md:border-t md:border-black"
+            style={{ touchAction: 'pan-y' }}
+          >
+            {/* Header fijo para el menú mobile */}
+            <div className="flex fixed z-10 items-center w-full h-12 bg-white" style={{ left: 0, bottom: '50%', minHeight: '48px', maxHeight: '56px', top: 'auto' }}>
+              <span className="flex-1 text-base font-medium text-center">Menu</span>
+            </div>
+            {/* Contenido del menú con margin-top para dejar espacio al header */}
+            <div className="overflow-y-auto flex-1 p-4 h-full" style={{ WebkitOverflowScrolling: 'touch', marginTop: '56px' }}>
+              <ControlPanel
+                settings={settings}
+                onSettingsChange={handleSettingsChange}
+                onImageLoad={handleImageLoad}
+                onExport={handleExport}
+                hasImage={!!image}
+                useCustomColors={useCustomColors}
+                onUseCustomColorsToggle={handleUseCustomColorsToggle}
+                customNeonColors={customNeonColors}
+                setCustomNeonColor={setCustomNeonColors}
+                setShowExportPopup={setShowExportPopup}
+              />
             </div>
           </div>
-          {/* Contenido del menú con margin-top para dejar espacio al header */}
-          <div className="overflow-y-auto flex-1 p-4 h-full" style={{ WebkitOverflowScrolling: 'touch', marginTop: '56px' }}>
-            <ControlPanel
-              settings={settings}
-              onSettingsChange={handleSettingsChange}
-              onImageLoad={handleImageLoad}
-              onExport={handleExport}
-              hasImage={!!image}
-              useCustomColors={useCustomColors}
-              onUseCustomColorsToggle={handleUseCustomColorsToggle}
-              customNeonColors={customNeonColors}
-              setCustomNeonColor={setCustomNeonColors}
-              setShowExportPopup={setShowExportPopup}
-            />
-          </div>
-        </div>
+        </>
       )}
 
       {/* Main Canvas Area */}

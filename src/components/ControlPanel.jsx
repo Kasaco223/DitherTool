@@ -178,45 +178,45 @@ const ControlPanel = ({
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex relative flex-col">
+      {onMinimizeMenu && (
+        <button
+          onClick={onMinimizeMenu}
+          className="flex absolute top-4 left-4 z-10 justify-center items-center p-0 w-6 h-6 text-base font-bold text-black bg-white rounded-none border border-black shadow-none hover:bg-gray-100"
+          title="Minimizar menú"
+        >
+          <span className="block text-xs leading-none" style={{ transform: 'translateY(-1px)' }}>{'<'}</span>
+        </button>
+      )}
       {/* Import/Export Buttons y Minimizar */}
       <div className="mb-3 space-y-2 md:mb-4 md:space-y-3">
         <div className="flex flex-row gap-3 items-center mb-2 w-full">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileSelect}
-          className="hidden"
-        />
-        <button
-          onClick={handleImportClick}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+          <button
+            onClick={handleImportClick}
             className="flex-1 h-12 px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm uppercase tracking-wider border border-black hover:bg-black hover:text-white transition-all duration-300 rounded-none flex items-center justify-center"
-        >
-          Import Image
-        </button>
-          {onMinimizeMenu && (
-        <button
-              onClick={onMinimizeMenu}
-              className="flex justify-center items-center w-12 h-12 font-bold text-black bg-white rounded-none border border-black shadow-none hover:bg-gray-100"
-              title="Minimizar menú"
-            >
-              <span className="block leading-none text-1xl" style={{ transform: 'translateY(-1px)' }}>{'>'}</span>
-            </button>
-          )}
+          >
+            Import Image
+          </button>
         </div>
-        {/*<button
-          onClick={() => setShowExportPopup(true)}
-          disabled={!hasImage}
-          className={`w-full px-4 py-2 text-sm font-medium text-white rounded-none ${hasImage
-              ? 'bg-black hover:bg-gray-800'
-              : 'bg-gray-300 cursor-not-allowed'
-          } transition-colors`}
-        >
-          Export
-        </button> */}
       </div>
-      {/*}
+      {/*<button
+        onClick={() => setShowExportPopup(true)}
+        disabled={!hasImage}
+        className={`w-full px-4 py-2 text-sm font-medium text-white rounded-none ${hasImage
+            ? 'bg-black hover:bg-gray-800'
+            : 'bg-gray-300 cursor-not-allowed'
+        } transition-colors`}
+      >
+        Export
+      </button> */}
+      {/*
       <div className="slider-separator"></div>*/}
       {/* Presets Dropdown */}
       {/*
