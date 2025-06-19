@@ -242,7 +242,7 @@ const CanvasPreview = forwardRef(({
       {/* Canvas Container */}
       <div
         ref={containerRef}
-        className="flex items-center justify-center flex-1 w-full h-full overflow-auto canvas-container"
+        className="flex overflow-auto flex-1 justify-center items-center w-full h-full canvas-container"
         style={{height: '100%'}}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
@@ -261,10 +261,16 @@ const CanvasPreview = forwardRef(({
             onTouchStart={handleTouchStart}
           />
         ) : (
-          <div className="p-4 text-center text-gray-400 md:p-8">
-            <div className="mb-4 text-3xl md:text-4xl">📷</div>
-            <p className="mb-2 text-base tracking-wide md:text-lg">No image loaded</p>
-            <p className="text-xs tracking-wide md:text-sm">Import an image to get started</p>
+          <div className="flex flex-col justify-center items-center p-4 w-full h-full md:p-8">
+            <img src="/Upload_Image.svg" alt="Upload" className="mb-0.5 w-5 h-5 md:w-14 md:h-14" />
+            <p className="mb-0.5 text-[8px] tracking-wide text-gray-200 md:text-lg">No image loaded</p>
+            <p className="mb-1 text-[8px] tracking-wide text-gray-400 md:text-sm">Import an image to get started</p>
+            <button
+              className="px-1 py-0 text-[8px] md:px-8 md:py-2 md:text-base font-medium border border-black bg-white text-black rounded-none hover:bg-black hover:text-white transition-all duration-200"
+              onClick={() => document.querySelector('input[type=file]')?.click()}
+            >
+              IMPORT IMAGE
+            </button>
           </div>
         )}
       </div>

@@ -176,16 +176,15 @@ function App() {
     <div className="flex overflow-x-hidden flex-col min-h-screen text-black bg-white md:flex-row">
       {/* Unified Header */}
       <div className="flex fixed top-0 z-50 justify-between items-center p-4 w-full bg-white border-b border-gray-200">
-        <h1 className="text-xl font-medium tracking-tight">Dither Tool</h1>
+        <img src="/ditherTool.svg" alt="Dither Tool Logo" className="h-8 md:h-10 w-auto max-w-[200px]" />
           <div className="flex items-center space-x-3">
           {/* Botón Exportar en el header */}
           <button
-            onClick={() => setShowExportPopup(true)}
-            disabled={!image}
-            className={`px-4 py-2 text-sm font-medium text-white rounded ${image ? 'bg-black hover:bg-gray-800' : 'bg-gray-300 cursor-not-allowed'} transition-colors`}
+            onClick={() => { if (image) setShowExportPopup(true); }}
+            className={"px-4 py-2 text-sm font-medium text-white bg-black rounded-none transition-colors hover:bg-gray-800"}
           >
             EXPORT
-            </button>
+          </button>
         </div>
       </div>
 
@@ -249,6 +248,33 @@ function App() {
             >
               <span className="block text-2xl">{'v'}</span>
             </button>
+            {/* Isla de zoom/reset sobre la flechita */}
+            <div className="flex absolute right-4 -top-12 z-50 flex-row items-center p-2 space-x-2 bg-white rounded-none border border-black shadow-none">
+              <button
+                onClick={handleZoomIn}
+                className="flex justify-center items-center w-8 h-8 text-lg font-normal text-black bg-white rounded-none border border-black hover:bg-gray-100 focus:outline-none"
+                title="Zoom In"
+              >
+                +
+              </button>
+              <span className="mx-2 text-base font-normal text-black select-none" style={{minWidth: '48px', textAlign: 'center'}}>
+                {`${Math.round(zoom * 100)}%`}
+              </span>
+              <button
+                onClick={handleZoomOut}
+                className="flex justify-center items-center w-8 h-8 text-lg font-normal text-black bg-white rounded-none border border-black hover:bg-gray-100 focus:outline-none"
+                title="Zoom Out"
+              >
+                -
+              </button>
+              <button
+                onClick={handleResetZoom}
+                className="flex justify-center items-center px-3 ml-2 h-8 text-base font-normal text-black bg-white rounded-none border border-black hover:bg-gray-100 focus:outline-none"
+                title="Reset"
+              >
+                RESET
+              </button>
+            </div>
           </div>
           {/* Contenido del menú con margin-top para dejar espacio al header */}
           <div className="overflow-y-auto flex-1 p-4 h-full" style={{ WebkitOverflowScrolling: 'touch', marginTop: '56px' }}>
@@ -269,7 +295,14 @@ function App() {
       )}
 
       {/* Main Canvas Area */}
-      <div ref={canvasContainerRef} className="flex-1 p-4 pt-20 w-full md:p-8" style={{height: 'calc(100vh - 56px)'}}>
+      <div
+        ref={canvasContainerRef}
+        className="flex-1 p-4 pt-20 w-full md:p-8"
+        style={{
+          height: 'calc(100vh - 56px)',
+          marginLeft: !isMobile && !menuMinimized ? '320px' : 0
+        }}
+      >
         <CanvasPreview
           ref={canvasRef}
           image={image}
@@ -284,34 +317,35 @@ function App() {
           offset={offset}
           setOffset={setOffset}
         />
-        {/* Isla flotante de controles de zoom/reset */}
-        <div className="flex fixed left-4 top-20 z-50 flex-row items-center p-2 space-x-2 bg-white rounded-none border border-black shadow-none md:right-6 md:bottom-6 md:left-auto md:top-auto"
-          style={{ marginTop: isMobile ? '16px' : undefined }}>
-          <button
-            onClick={handleZoomIn}
-            className="flex justify-center items-center w-8 h-8 text-lg font-normal text-black bg-white rounded-none border border-black hover:bg-gray-100 focus:outline-none"
-            title="Zoom In"
-          >
-            +
-          </button>
-          <span className="mx-2 text-base font-normal text-black select-none" style={{minWidth: '48px', textAlign: 'center'}}>
-            {`${Math.round(zoom * 100)}%`}
-          </span>
-          <button
-            onClick={handleZoomOut}
-            className="flex justify-center items-center w-8 h-8 text-lg font-normal text-black bg-white rounded-none border border-black hover:bg-gray-100 focus:outline-none"
-            title="Zoom Out"
-          >
-            -
-          </button>
-          <button
-            onClick={handleResetZoom}
-            className="flex justify-center items-center px-3 ml-2 h-8 text-base font-normal text-black bg-white rounded-none border border-black hover:bg-gray-100 focus:outline-none"
-            title="Reset"
-          >
-            RESET
-          </button>
-        </div>
+        {/* Isla flotante de controles de zoom/reset en desktop y mobile con menú cerrado */}
+        {(!isMobile || (isMobile && !isMobileMenuOpen)) && (
+          <div className="flex fixed right-6 bottom-6 z-50 flex-row items-center p-2 space-x-2 bg-white rounded-none border border-black shadow-none">
+            <button
+              onClick={handleZoomIn}
+              className="flex justify-center items-center w-8 h-8 text-lg font-normal text-black bg-white rounded-none border border-black hover:bg-gray-100 focus:outline-none"
+              title="Zoom In"
+            >
+              +
+            </button>
+            <span className="mx-2 text-base font-normal text-black select-none" style={{minWidth: '48px', textAlign: 'center'}}>
+              {`${Math.round(zoom * 100)}%`}
+            </span>
+            <button
+              onClick={handleZoomOut}
+              className="flex justify-center items-center w-8 h-8 text-lg font-normal text-black bg-white rounded-none border border-black hover:bg-gray-100 focus:outline-none"
+              title="Zoom Out"
+            >
+              -
+            </button>
+            <button
+              onClick={handleResetZoom}
+              className="flex justify-center items-center px-3 ml-2 h-8 text-base font-normal text-black bg-white rounded-none border border-black hover:bg-gray-100 focus:outline-none"
+              title="Reset"
+            >
+              RESET
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Export Popup */}

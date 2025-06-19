@@ -327,17 +327,6 @@ const ControlPanel = ({
           Save Preset
         </button>
       </div>
-      {/* Save Preset & Reset Buttons */}
-      <div className="flex flex-col gap-2 pt-6 mt-6 border-t border-gray-200 md:pt-8 md:mt-8">
-       
-        <button
-          onClick={handleReset}
-          className="w-full px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm uppercase tracking-wider border border-black text-black bg-white hover:bg-gray-100"
-        >
-          RESET ALL
-        </button>
-      </div>
-
       <div className="slider-separator"></div>
       {/* Settings Panel */}
       <div className="overflow-y-auto control-panel">
@@ -445,6 +434,7 @@ const ControlPanel = ({
               <div className="slider-separator"></div>
             </div>
           )}
+           <div className="slider-separator"></div>
           {/* Style Dropdown */}
           <div>
             <label className="block mb-2 text-xs font-medium tracking-wide uppercase md:mb-3 md:text-sm">Style</label>
@@ -594,11 +584,16 @@ const ControlPanel = ({
               style={getSliderBg(settings.blur, 0, 10)}
             />
           </div>
-
+          <div className="slider-separator"></div>
         </div>
-
-
       </div>
+      {/* Botón RESET ALL al final */}
+      <button
+        onClick={handleReset}
+        className="w-full px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm uppercase tracking-wider border border-black text-black bg-white hover:bg-gray-100 mt-8"
+      >
+        RESET ALL
+      </button>
       {/* Popup para nombre de preset */}
       {showPresetPopup && (
         <div className="flex fixed inset-0 z-50 justify-center items-center bg-black bg-opacity-40">
