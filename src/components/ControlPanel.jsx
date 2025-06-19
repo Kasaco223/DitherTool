@@ -106,8 +106,16 @@ const ControlPanel = ({
 
   // Añadir safeSetCustomNeonColor como función auxiliar
   const safeSetCustomNeonColor = (newColor) => {
+    // Si el color es blanco puro, lo forzamos a v=99.6 (da 254 en RGB)
+    let h = newColor.h, s = newColor.s, v = newColor.v;
+    if (s === 0 && v === 100) {
+      v = 99.6;
+    }
     setCustomNeonColor(prev => ({
       ...newColor,
+      h,
+      s,
+      v,
       a: typeof newColor.a === 'number' ? newColor.a : (prev.a ?? 1)
     }));
   };

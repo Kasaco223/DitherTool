@@ -59,7 +59,8 @@ const CanvasPreview = forwardRef(({
   useCustomColors,
   customNeonColors,
   offset,
-  setOffset
+  setOffset,
+  invert
 }, ref) => {
   const canvasRef = useRef(null)
   const containerRef = useRef(null)
@@ -105,10 +106,8 @@ const CanvasPreview = forwardRef(({
         break
     }
 
-    // Clear canvas and set background to black for the dithered output
+    // Clear canvas y deja fondo transparente para que la opacidad de las partículas sea visible
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = 'black';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     const data = processedImageData.data;
     const processedWidth = processedImageData.width;
@@ -243,7 +242,10 @@ const CanvasPreview = forwardRef(({
       <div
         ref={containerRef}
         className="flex overflow-auto flex-1 justify-center items-center w-full h-full canvas-container"
-        style={{height: '100%'}}
+        style={{
+          backgroundColor: invert ? '#ffffff' : '#000000',
+          height: '100%'
+        }}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
       >

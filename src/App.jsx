@@ -140,15 +140,15 @@ function App() {
         return
       }
 
-      // Si es JPG, rellenamos los espacios transparentes con negro
+      // Si es JPG, rellenamos los espacios transparentes con negro o blanco según invert
       if (format === 'jpg') {
         const tempCanvas = document.createElement('canvas')
         const tempCtx = tempCanvas.getContext('2d')
         tempCanvas.width = canvas.width
         tempCanvas.height = canvas.height
         
-        // Rellenar con negro
-        tempCtx.fillStyle = 'black'
+        // Rellenar con blanco si invert, negro si no
+        tempCtx.fillStyle = settings.invert ? 'white' : 'black'
         tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height)
         
         // Dibujar la imagen original encima
@@ -170,7 +170,7 @@ function App() {
     } catch (err) {
       console.error('Error exportando imagen:', err)
     }
-  }, [])
+  }, [settings.invert])
 
   return (
     <div className="flex overflow-x-hidden flex-col min-h-screen text-black bg-white md:flex-row">
@@ -298,6 +298,7 @@ function App() {
           customNeonColors={customNeonColors}
           offset={offset}
           setOffset={setOffset}
+          invert={settings.invert}
         />
         {/* Isla flotante de controles de zoom/reset en desktop y mobile con menú cerrado (ahora a la izquierda o derecha) */}
         {(!isMobile || (isMobile && !isMobileMenuOpen)) && (

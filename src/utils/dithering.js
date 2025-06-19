@@ -92,6 +92,16 @@ export function hsvToRgb(h, s, v) {
   return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
 }
 
+// Aplica opacidad a toda la imagen antes de cualquier otro procesamiento
+export function aplicarOpacidad(imageData, alpha) {
+  if (typeof alpha !== 'number' || alpha >= 1) return imageData;
+  const data = new Uint8ClampedArray(imageData.data);
+  for (let i = 0; i < data.length; i += 4) {
+    data[i + 3] = Math.round(data[i + 3] * alpha);
+  }
+  return new ImageData(data, imageData.width, imageData.height);
+}
+
 /**
  * Apply Floyd-Steinberg dithering algorithm
  */
@@ -109,9 +119,15 @@ export function applyFloydSteinberg(imageData, settings) {
     customNeonColors
   } = settings
 
-  const data = new Uint8ClampedArray(imageData.data)
-  const width = imageData.width
-  const height = imageData.height
+  // --- APLICAR OPACIDAD ANTES DE TODO ---
+  let preImageData = imageData;
+  if (useCustomColors && customNeonColors && typeof customNeonColors.a === 'number' && customNeonColors.a < 1) {
+    preImageData = aplicarOpacidad(imageData, customNeonColors.a);
+  }
+
+  const data = new Uint8ClampedArray(preImageData.data)
+  const width = preImageData.width
+  const height = preImageData.height
 
   // Determine the active neon color once per function call
   let activeNeonColor = null;
@@ -141,13 +157,13 @@ export function applyFloydSteinberg(imageData, settings) {
     const tempCtx = tempCanvas.getContext('2d')
     tempCanvas.width = width
     tempCanvas.height = height
-    tempCtx.putImageData(imageData, 0, 0)
+    tempCtx.putImageData(preImageData, 0, 0)
     
     // Scale the image
     ctx.drawImage(tempCanvas, 0, 0, scaledWidth, scaledHeight)
     processedImageData = ctx.getImageData(0, 0, scaledWidth, scaledHeight)
   } else {
-    processedImageData = imageData
+    processedImageData = preImageData
   }
 
   const processedData = new Uint8ClampedArray(processedImageData.data)
@@ -283,13 +299,21 @@ export function applyFloydSteinberg(imageData, settings) {
       if (isParticle) {
         let r, g, b;
 
-        if (activeNeonColor) { // Use the determined active neon color
+        if (activeNeonColor) {
           [r, g, b] = hsvToRgb(activeNeonColor.h, activeNeonColor.s, activeNeonColor.v);
+          // Si el color es blanco puro, lo manejo como 255,255,254
+          if (r === 255 && g === 255 && b === 255) {
+            b = 254;
+          }
         } else {
-          r = 255; g = 255; b = 255; // Blanco
+          r = 255; g = 255; b = 255;
         }
 
-        if (useCustomColors && invert) {
+        // EXCEPCIÓN: Si el color custom es blanco puro y está invert, forzar negro puro
+        const isWhite = (activeNeonColor && activeNeonColor.s === 0 && activeNeonColor.v === 100) || (r === 255 && g === 255 && b === 255);
+        if (useCustomColors && invert && isWhite) {
+          r = 0; g = 0; b = 0;
+        } else if (useCustomColors && invert) {
           r = 255 - r;
           g = 255 - g;
           b = 255 - b;
@@ -309,7 +333,7 @@ export function applyFloydSteinberg(imageData, settings) {
         tempColoredData[outputPixelIdx + 1] = 0;
         tempColoredData[outputPixelIdx + 2] = 0;
         }
-        tempColoredData[outputPixelIdx + 3] = 255; // Completamente opaco
+        tempColoredData[outputPixelIdx + 3] = 0; // Totalmente transparente
       }
     }
     
@@ -322,7 +346,7 @@ export function applyFloydSteinberg(imageData, settings) {
     finalImageData = ctx.getImageData(0, 0, width, height)
   } else {
     // Convert back to RGBA for original size with neon colors
-    const resultData = new Uint8ClampedArray(imageData.data.length)
+    const resultData = new Uint8ClampedArray(preImageData.data.length)
     for (let i = 0; i < grayscaleData.length; i++) {
       const grayValue = grayscaleData[i];
       const outputPixelIdx = i * 4;
@@ -331,13 +355,21 @@ export function applyFloydSteinberg(imageData, settings) {
       if (isParticle) {
         let r, g, b;
 
-        if (activeNeonColor) { // Use the determined active neon color
+        if (activeNeonColor) {
           [r, g, b] = hsvToRgb(activeNeonColor.h, activeNeonColor.s, activeNeonColor.v);
+          // Si el color es blanco puro, lo manejo como 255,255,254
+          if (r === 255 && g === 255 && b === 255) {
+            b = 254;
+          }
         } else {
-          r = 255; g = 255; b = 255; // Blanco
+          r = 255; g = 255; b = 255;
         }
 
-        if (useCustomColors && invert) {
+        // EXCEPCIÓN: Si el color custom es blanco puro y está invert, forzar negro puro
+        const isWhite = (activeNeonColor && activeNeonColor.s === 0 && activeNeonColor.v === 100) || (r === 255 && g === 255 && b === 255);
+        if (useCustomColors && invert && isWhite) {
+          r = 0; g = 0; b = 0;
+        } else if (useCustomColors && invert) {
           r = 255 - r;
           g = 255 - g;
           b = 255 - b;
@@ -349,7 +381,7 @@ export function applyFloydSteinberg(imageData, settings) {
         if (useCustomColors && typeof customNeonColors.a === 'number') {
           resultData[outputPixelIdx + 3] = Math.round(customNeonColors.a * 255);
         } else {
-          resultData[outputPixelIdx + 3] = 255;
+          resultData[outputPixelIdx + 3] = 255; // Opaco si no es custom color
         }
       } else {
         if (useCustomColors && invert) {
@@ -361,7 +393,7 @@ export function applyFloydSteinberg(imageData, settings) {
         resultData[outputPixelIdx + 1] = 0;
         resultData[outputPixelIdx + 2] = 0;
         }
-        resultData[outputPixelIdx + 3] = 255; // Completamente opaco
+        resultData[outputPixelIdx + 3] = 0; // Totalmente transparente
       }
     }
     finalImageData = new ImageData(resultData, width, height)
@@ -519,13 +551,21 @@ export function applyAtkinson(imageData, settings) {
     if (isParticle) {
       let r, g, b;
 
-      if (activeNeonColor) { // Use the determined active neon color
+      if (activeNeonColor) {
         [r, g, b] = hsvToRgb(activeNeonColor.h, activeNeonColor.s, activeNeonColor.v);
-      } else { // Si no se usan colores personalizados, output blanco y negro
-        r = 255; g = 255; b = 255; // Blanco
+        // Si el color es blanco puro, lo manejo como 255,255,254
+        if (r === 255 && g === 255 && b === 255) {
+          b = 254;
+        }
+      } else {
+        r = 255; g = 255; b = 255;
       }
 
-      if (useCustomColors && invert) {
+      // EXCEPCIÓN: Si el color custom es blanco puro y está invert, forzar negro puro
+      const isWhite = (activeNeonColor && activeNeonColor.s === 0 && activeNeonColor.v === 100) || (r === 255 && g === 255 && b === 255);
+      if (useCustomColors && invert && isWhite) {
+        r = 0; g = 0; b = 0;
+      } else if (useCustomColors && invert) {
         r = 255 - r;
         g = 255 - g;
         b = 255 - b;
@@ -537,7 +577,7 @@ export function applyAtkinson(imageData, settings) {
       if (useCustomColors && typeof customNeonColors.a === 'number') {
         resultData[outputPixelIdx + 3] = Math.round(customNeonColors.a * 255);
       } else {
-        resultData[outputPixelIdx + 3] = 255;
+        resultData[outputPixelIdx + 3] = 255; // Opaco si no es custom color
       }
     } else {
       if (useCustomColors && invert) {
@@ -549,7 +589,7 @@ export function applyAtkinson(imageData, settings) {
       resultData[outputPixelIdx + 1] = 0;
       resultData[outputPixelIdx + 2] = 0;
       }
-      resultData[outputPixelIdx + 3] = 255; // Completamente opaco
+      resultData[outputPixelIdx + 3] = 0; // Totalmente transparente
     }
   }
 
@@ -733,7 +773,11 @@ export function applySmoothDiffuse(imageData, settings) {
           r = 255; g = 255; b = 255; // Blanco
         }
         
-        if (useCustomColors && invert) {
+        // EXCEPCIÓN: Si el color custom es blanco puro y está invert, forzar negro puro
+        const isWhite = (activeNeonColor && activeNeonColor.s === 0 && activeNeonColor.v === 100) || (r === 255 && g === 255 && b === 255);
+        if (useCustomColors && invert && isWhite) {
+          r = 0; g = 0; b = 0;
+        } else if (useCustomColors && invert) {
           r = 255 - r;
           g = 255 - g;
           b = 255 - b;
@@ -745,7 +789,7 @@ export function applySmoothDiffuse(imageData, settings) {
         if (useCustomColors && typeof customNeonColors.a === 'number') {
           resultData[outputPixelIdx + 3] = Math.round(customNeonColors.a * 255);
         } else {
-          resultData[outputPixelIdx + 3] = 255;
+          resultData[outputPixelIdx + 3] = 255; // Opaco si no es custom color
         }
       } else {
         // All non-edge pixels become fondo correcto
@@ -762,7 +806,7 @@ export function applySmoothDiffuse(imageData, settings) {
         resultData[outputPixelIdx + 1] = 0;
         resultData[outputPixelIdx + 2] = 0;
         }
-        resultData[outputPixelIdx + 3] = 255; // Fondo
+        resultData[outputPixelIdx + 3] = 0; // Totalmente transparente
       }
     }
   }
