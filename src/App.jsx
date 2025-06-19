@@ -28,6 +28,7 @@ function App() {
     luminanceThreshold: 50,
     blur: 0,
     invert: false,
+    invertShape: 0,
     style: 'Floyd-Steinberg'
   })
 

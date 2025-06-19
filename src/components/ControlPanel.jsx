@@ -408,6 +408,28 @@ const ControlPanel = ({
             />
           </div>
           <div className="slider-separator" style={{margin: '6px 0 4px 0', height: '1px'}}></div>
+
+          {/* InvertShape Slider */}
+          <div className="mb-3 md:mb-4">
+            <label
+              htmlFor="invertShape-slider"
+              className="flex justify-between mb-2 text-xs font-medium tracking-wide uppercase md:text-sm"
+            >
+              <span>Invert Shape</span>
+              <span>{settings.invertShape}</span>
+            </label>
+            <input
+              id="invertShape-slider"
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value={settings.invertShape}
+              onChange={(e) => handleSliderChange('invertShape', e.target.value)}
+              className="slider"
+              style={getSliderBg(settings.invertShape, 0, 100)}
+            />
+          </div>
         </div>
         {/* --- BLOQUE CUSTOM COLORS ABAJO --- */}
         <div className="mt-1">
@@ -500,7 +522,7 @@ const ControlPanel = ({
                   className="w-4 h-4 rounded-none border-gray-200 focus:ring-black focus:ring-offset-0"
                 />
                 <label htmlFor="invert" className="text-xs font-medium tracking-wide uppercase md:text-sm">
-                  Invert
+                  Invert color
                 </label>
               </div>
             </div>
