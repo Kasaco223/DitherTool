@@ -9,6 +9,7 @@ import { applyAtkinson } from '../utils/atkinson'
 import { applySmoothDiffuse } from '../utils/smoothDiffuse'
 import { applyFloydSteinberg } from '../utils/floydSteinberg'
 import { applyStippling } from '../utils/stippling'
+import { applyGradient } from '../utils/gradient'
 
 // Debounce hook for performance optimization
 function useDebounce(value, delay) {
@@ -108,6 +109,13 @@ const CanvasPreview = forwardRef(({
 
     let processedImageData
     switch (debouncedSettings.style) {
+      case 'Gradient':
+        processedImageData = applyGradient(
+          imageData,
+          debouncedSettings.contrast,
+          (typeof debouncedSettings.customNeonColors?.a === 'number' ? debouncedSettings.customNeonColors.a : 1)
+        );
+        break;
       case 'Atkinson':
         processedImageData = applyAtkinson(imageData, debouncedSettings)
         break
@@ -184,7 +192,7 @@ const CanvasPreview = forwardRef(({
           }
         }
       }
-    } else if (ditherStyle === 'Stippling') {
+    } else if (ditherStyle === 'Stippling' || ditherStyle === 'Gradient') {
       ctx.putImageData(processedImageData, 0, 0);
     }
 

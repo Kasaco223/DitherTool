@@ -268,6 +268,7 @@ const ControlPanel = ({
                 { value: 'Atkinson', label: 'Atkinson' },
                 { value: 'Smooth Diffuse', label: 'Smooth Diffuse' },
                 { value: 'Stippling', label: 'Stippling' },
+                { value: 'Gradient', label: 'Gradient' },
               ]}
               value={settings.style}
               onChange={val => handleSelectChange('style', val)}

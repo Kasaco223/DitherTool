@@ -91,7 +91,7 @@ export function hsvToRgb(h, s, v) {
   }
   return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
 }
-
+1.
 // Aplica opacidad a toda la imagen antes de cualquier otro procesamiento
 export function aplicarOpacidad(imageData, alpha) {
   if (typeof alpha !== 'number' || alpha >= 1) return imageData;
