@@ -10,6 +10,7 @@ import { applySmoothDiffuse } from '../utils/smoothDiffuse'
 import { applyFloydSteinberg } from '../utils/floydSteinberg'
 import { applyStippling } from '../utils/stippling'
 import { applyGradient } from '../utils/gradient'
+import { imageDataToAsciiHTML } from '../utils/ascii'
 
 // Debounce hook for performance optimization
 function useDebounce(value, delay) {
@@ -76,27 +77,38 @@ const CanvasPreview = forwardRef(({
   // ✅ Expose canvas DOM to parent
   useImperativeHandle(ref, () => canvasRef.current)
 
-  const debouncedSettings = useDebounce({
-    ...settings,
-    useCustomColors,
-    customNeonColors
-  }, 100)
+  const debouncedSettings = { ...settings, useCustomColors, customNeonColors };
 
-  useEffect(() => {
-    if (!image || !canvasRef.current) return
+  const [asciiHTML, setAsciiHTML] = React.useState(null);
 
-    const canvas = canvasRef.current
-    const ctx = canvas.getContext('2d')
+  // Definir minN, maxN y charSize fuera del useEffect para uso global
+  const minN = 20;
+  const maxN = 200;
+  const scale = typeof debouncedSettings.scale === 'number' ? debouncedSettings.scale : 1.0;
+  const N = Math.round(minN + (1.0 - scale) * (maxN - minN));
+  const charSize = N;
 
-    canvas.width = image.width
-    canvas.height = image.height
+  React.useEffect(() => {
+    if (!image) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    canvas.width = image.width;
+    canvas.height = image.height;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(image, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-    ctx.drawImage(image, 0, 0)
-
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-
-    // Apply gradual color inversion based on invertShape
+    if (debouncedSettings.style === 'ASCII') {
+      setAsciiHTML(null);
+      // Procesar la imagen base según los sliders antes de pasar a ASCII
+      const canvas = document.createElement('canvas');
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(image, 0, 0);
+      let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      // Invertir colores si invertShape > 0
     if (debouncedSettings.invertShape > 0) {
       const data = imageData.data;
       const amount = debouncedSettings.invertShape / 100;
@@ -106,8 +118,55 @@ const CanvasPreview = forwardRef(({
         data[i + 2] = data[i + 2] + (255 - 2 * data[i + 2]) * amount; // Blue
       }
     }
-
-    let processedImageData
+      // Determinar color personalizado si useCustomColors está activo
+      let asciiColor = debouncedSettings.invert ? '#000' : '#fff';
+      if (debouncedSettings.useCustomColors && debouncedSettings.customNeonColors) {
+        // Convertir HSV a HEX o RGB
+        const { h, s, v } = debouncedSettings.customNeonColors;
+        // Conversión HSV a RGB
+        function hsvToRgb(h, s, v) {
+          s /= 100; v /= 100;
+          let c = v * s;
+          let x = c * (1 - Math.abs((h / 60) % 2 - 1));
+          let m = v - c;
+          let r = 0, g = 0, b = 0;
+          if (h < 60) { r = c; g = x; b = 0; }
+          else if (h < 120) { r = x; g = c; b = 0; }
+          else if (h < 180) { r = 0; g = c; b = x; }
+          else if (h < 240) { r = 0; g = x; b = c; }
+          else if (h < 300) { r = x; g = 0; b = c; }
+          else { r = c; g = 0; b = x; }
+          r = Math.round((r + m) * 255);
+          g = Math.round((g + m) * 255);
+          b = Math.round((b + m) * 255);
+          return `rgb(${r},${g},${b})`;
+        }
+        asciiColor = hsvToRgb(h, s, v);
+      }
+      // Aquí puedes aplicar otros sliders (contraste, brillo, etc.) si tienes funciones utilitarias
+      // Por ahora, solo se pasa el imageData modificado a ASCII
+      const columns = Math.floor(image.width / N);
+      const rows = Math.floor(image.height / N);
+      imageDataToAsciiHTML(imageData, {
+        width: columns,
+        height: rows,
+        contrast: 1 + debouncedSettings.contrast / 100,
+        brightness: debouncedSettings.midtones / 50 - 1,
+        colored: false,
+        fontSize: charSize,
+        fontFamily: 'monospace',
+        lineHeight: 0.6,
+        background: debouncedSettings.invert ? '#fff' : '#000',
+        color: asciiColor,
+      })
+        .then(html => setAsciiHTML(html))
+        .catch(() => setAsciiHTML('<pre style=\"color:red\">Error generando ASCII</pre>'));
+      return;
+    } else {
+      setAsciiHTML(null); // Limpiar arte ASCII al cambiar de filtro
+    }
+    // Filtros normales
+    let processedImageData;
     switch (debouncedSettings.style) {
       case 'Gradient':
         processedImageData = applyGradient(imageData, debouncedSettings);
@@ -126,73 +185,85 @@ const CanvasPreview = forwardRef(({
         processedImageData = applyFloydSteinberg(imageData, debouncedSettings)
         break
     }
-
-    // Clear canvas y deja fondo transparente para que la opacidad de las partículas sea visible
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.putImageData(processedImageData, 0, 0);
+  }, [image, settings, useCustomColors, customNeonColors])
 
-    const data = processedImageData.data;
-    const processedWidth = processedImageData.width;
-    const processedHeight = processedImageData.height;
-    const ditherStyle = debouncedSettings.style;
+  React.useEffect(() => {
+    console.log('asciiHTML actualizado:', asciiHTML);
+  }, [asciiHTML]);
 
-    // Optimize rendering based on dither style
-    if (ditherStyle === 'Floyd-Steinberg' || ditherStyle === 'Atkinson') {
-      // Use pre-rendered dot pattern for performance
-      const finalImageData = ctx.createImageData(processedWidth, processedHeight);
-      const finalData = finalImageData.data;
-      const dotSize = 1; // Size of the dot pattern (1x1 pixel for simplicity)
+  // Limpiar arte ASCII cuando la imagen cambia
+  React.useEffect(() => {
+    setAsciiHTML(null);
+  }, [image]);
 
-      for (let y = 0; y < processedHeight; y++) {
-        for (let x = 0; x < processedWidth; x++) {
-          const i = (y * processedWidth + x) * 4; // Index in processedData
-          const pixelR = data[i];
-          const pixelG = data[i + 1];
-          const pixelB = data[i + 2];
-          const pixelA = data[i + 3];
-
-          if (pixelR !== 0 || pixelG !== 0 || pixelB !== 0) { // If not black
-            const dotColor = `rgba(${pixelR}, ${pixelG}, ${pixelB}, ${pixelA / 255})`;
-            const dotPattern = getDotPattern(dotSize, dotColor);
-            const dotData = dotPattern.data;
-
-            // Copy dot pattern data to finalData
-            for (let dy = 0; dy < dotSize; dy++) {
-              for (let dx = 0; dx < dotSize; dx++) {
-                const sourceIdx = (dy * dotSize + dx) * 4;
-                const destIdx = ((y * dotSize + dy) * (processedWidth * dotSize) + (x * dotSize + dx)) * 4;
-
-                finalData[destIdx] = dotData[sourceIdx];
-                finalData[destIdx + 1] = dotData[sourceIdx + 1];
-                finalData[destIdx + 2] = dotData[sourceIdx + 2];
-                finalData[destIdx + 3] = dotData[sourceIdx + 3];
-              }
-            }
-          }
+  // Recalcular arte ASCII inmediatamente al cambiar cualquier slider relevante
+  React.useEffect(() => {
+    if (debouncedSettings.style === 'ASCII' && image) {
+      setAsciiHTML(null);
+      // Procesar la imagen base según los sliders antes de pasar a ASCII
+      const canvas = document.createElement('canvas');
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(image, 0, 0);
+      let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      // Invertir colores si invertShape > 0
+      if (debouncedSettings.invertShape > 0) {
+        const data = imageData.data;
+        const amount = debouncedSettings.invertShape / 100;
+        for (let i = 0; i < data.length; i += 4) {
+          data[i] = data[i] + (255 - 2 * data[i]) * amount; // Red
+          data[i + 1] = data[i + 1] + (255 - 2 * data[i + 1]) * amount; // Green
+          data[i + 2] = data[i + 2] + (255 - 2 * data[i + 2]) * amount; // Blue
         }
       }
-      ctx.putImageData(finalImageData, 0, 0);
-
-    } else if (ditherStyle === 'Smooth Diffuse') {
-      // For Smooth Diffuse, draw squares directly (already optimized for lines)
-      for (let y = 0; y < processedHeight; y++) {
-        for (let x = 0; x < processedWidth; x++) {
-          const i = (y * processedWidth + x) * 4;
-          const r = data[i];
-          const g = data[i + 1];
-          const b = data[i + 2];
-          const a = data[i + 3];
-
-          if (r !== 0 || g !== 0 || b !== 0) { 
-            ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a / 255})`;
-            ctx.fillRect(x, y, 1, 1); // Dibuja un cuadrado de 1x1
-          }
+      // Determinar color personalizado si useCustomColors está activo
+      let asciiColor = debouncedSettings.invert ? '#000' : '#fff';
+      if (debouncedSettings.useCustomColors && debouncedSettings.customNeonColors) {
+        // Convertir HSV a HEX o RGB
+        const { h, s, v } = debouncedSettings.customNeonColors;
+        // Conversión HSV a RGB
+        function hsvToRgb(h, s, v) {
+          s /= 100; v /= 100;
+          let c = v * s;
+          let x = c * (1 - Math.abs((h / 60) % 2 - 1));
+          let m = v - c;
+          let r = 0, g = 0, b = 0;
+          if (h < 60) { r = c; g = x; b = 0; }
+          else if (h < 120) { r = x; g = c; b = 0; }
+          else if (h < 180) { r = 0; g = c; b = x; }
+          else if (h < 240) { r = 0; g = x; b = c; }
+          else if (h < 300) { r = x; g = 0; b = c; }
+          else { r = c; g = 0; b = x; }
+          r = Math.round((r + m) * 255);
+          g = Math.round((g + m) * 255);
+          b = Math.round((b + m) * 255);
+          return `rgb(${r},${g},${b})`;
         }
+        asciiColor = hsvToRgb(h, s, v);
       }
-    } else if (ditherStyle === 'Stippling' || ditherStyle === 'Gradient') {
-      ctx.putImageData(processedImageData, 0, 0);
+      // Aquí puedes aplicar otros sliders (contraste, brillo, etc.) si tienes funciones utilitarias
+      // Por ahora, solo se pasa el imageData modificado a ASCII
+      const columns = Math.floor(image.width / N);
+      const rows = Math.floor(image.height / N);
+      imageDataToAsciiHTML(imageData, {
+        width: columns,
+        height: rows,
+        contrast: 1 + debouncedSettings.contrast / 100,
+        brightness: debouncedSettings.midtones / 50 - 1,
+        colored: false,
+        fontSize: charSize,
+        fontFamily: 'monospace',
+        lineHeight: 0.6,
+        background: debouncedSettings.invert ? '#fff' : '#000',
+        color: asciiColor,
+      })
+        .then(html => setAsciiHTML(html))
+        .catch(() => setAsciiHTML('<pre style=\"color:red\">Error generando ASCII</pre>'));
     }
-
-  }, [image, debouncedSettings])
+  }, [image, debouncedSettings.style, N, charSize, debouncedSettings.contrast, debouncedSettings.midtones, debouncedSettings.invert, debouncedSettings.scale, debouncedSettings.invertShape, debouncedSettings.useCustomColors, debouncedSettings.customNeonColors]);
 
   // Pan: Mouse events
   const handleMouseDown = (e) => {
@@ -258,45 +329,32 @@ const CanvasPreview = forwardRef(({
     }
   }
 
+  // Renderizado simple: solo mostrar el arte ASCII generado
   return (
     <div className="flex flex-col w-full h-full" style={{height: '100%'}}>
-
-      {/* Canvas Container */}
-      <div
-        ref={containerRef}
-        className="flex overflow-auto flex-1 justify-center items-center w-full h-full canvas-container"
-        style={{
-          backgroundColor: invert ? '#ffffff' : '#000000',
-          height: '100%'
-        }}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-      >
-        {image ? (
-          <canvas
-            ref={canvasRef}
+      <div className="flex flex-1 justify-center items-center w-full h-full canvas-container">
+        {(debouncedSettings.style === 'ASCII' && asciiHTML) ? (
+          <div
+            className="ascii-art-preview"
             style={{
+              background: debouncedSettings.invert ? '#fff' : '#000',
+              color: debouncedSettings.invert ? '#000' : '#fff',
+              fontFamily: 'monospace',
+              fontSize: `${charSize}px`,
+              lineHeight: 0.6,
+              letterSpacing: '0px',
+              textAlign: 'left',
+              whiteSpace: 'pre',
+              padding: 0,
+              margin: 0,
               display: 'block',
-              transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
+              transform: `scale(${zoom})`,
               transformOrigin: 'center',
-              imageRendering: zoom > 2 ? 'pixelated' : 'auto',
-              cursor: isPanning.current ? 'grabbing' : 'grab'
             }}
-            onMouseDown={handleMouseDown}
-            onTouchStart={handleTouchStart}
+            dangerouslySetInnerHTML={{ __html: asciiHTML }}
           />
         ) : (
-          <div className="flex flex-col justify-center items-center p-4 w-full h-full md:p-8">
-            <img src="/Upload_Image.svg" alt="Upload" className="mb-4 w-5 h-5 md:w-14 md:h-14" />
-            <p className="mb-2 text-[8px] tracking-wide text-gray-200 md:text-lg">No image loaded</p>
-            <p className="mb-2 text-[8px] tracking-wide text-gray-400 md:text-sm">Import an image to get started</p>
-            <button
-              className="px-1 py-0 text-[8px] md:px-8 md:py-2 md:text-base font-medium border border-black bg-white text-black rounded-none hover:bg-black hover:text-white transition-all duration-200 mt-2 md:mt-4"
-              onClick={() => document.querySelector('input[type=file]')?.click()}
-            >
-              IMPORT IMAGE
-            </button>
-          </div>
+          <canvas ref={canvasRef} style={{ display: 'block', transform: `scale(${zoom})`, transformOrigin: 'center' }} />
         )}
       </div>
     </div>

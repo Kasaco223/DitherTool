@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import CanvasPreview from './components/CanvasPreview'
 import ControlPanel from './components/ControlPanel'
 import ExportOptionsPopup from './components/ExportOptionsPopup'
+import html2canvas from 'html2canvas'
 
 // Hook para detectar mobile
 function useIsMobile() {
@@ -147,59 +148,100 @@ function App() {
     setOffset({ x: 0, y: 0 }) // Centrar la imagen
   }, [])
 
-  const handleExport = useCallback((format) => {
+  const handleExport = useCallback(async (format) => {
+    // Detectar si el modo es ASCII clásico
+    if (settings.style === 'ASCII') {
+      // Buscar el div de arte ASCII
+      const asciiDiv = document.querySelector('.ascii-art-preview');
+      if (!asciiDiv) {
+        console.warn('No se encontró el div de arte ASCII');
+        return;
+      }
+      // Usar el tamaño de la imagen original para exportar
+      const exportWidth = image?.width || asciiDiv.scrollWidth;
+      const exportHeight = image?.height || asciiDiv.scrollHeight;
+      const prevWidth = asciiDiv.style.width;
+      const prevHeight = asciiDiv.style.height;
+      const prevDisplay = asciiDiv.style.display;
+      const prevMargin = asciiDiv.style.margin;
+      asciiDiv.style.width = exportWidth + 'px';
+      asciiDiv.style.height = exportHeight + 'px';
+      asciiDiv.style.display = 'flex';
+      asciiDiv.style.alignItems = 'center';
+      asciiDiv.style.justifyContent = 'center';
+      asciiDiv.style.margin = '0 auto';
+      // Usar html2canvas
+      try {
+        const canvas = await html2canvas(asciiDiv, {
+          backgroundColor: settings.invert ? '#fff' : '#000',
+          width: exportWidth,
+          height: exportHeight,
+          scale: 1
+        });
+        // Restaurar tamaño original
+        asciiDiv.style.width = prevWidth;
+        asciiDiv.style.height = prevHeight;
+        asciiDiv.style.display = prevDisplay;
+        asciiDiv.style.margin = prevMargin;
+        const link = document.createElement('a');
+        link.download = `ascii-art.${format}`;
+        if (format === 'jpg') {
+          link.href = canvas.toDataURL('image/jpeg', 1.0);
+        } else {
+          link.href = canvas.toDataURL('image/png');
+        }
+        link.click();
+        setShowExportPopup(false);
+      } catch (err) {
+        asciiDiv.style.width = prevWidth;
+        asciiDiv.style.height = prevHeight;
+        asciiDiv.style.display = prevDisplay;
+        asciiDiv.style.margin = prevMargin;
+        console.error('Error exportando arte ASCII:', err);
+      }
+      return;
+    }
+    // Modo GPU y otros: lógica original
     const canvas = canvasRef.current
     if (!canvas) {
       console.warn('Canvas no disponible')
       return
     }
-
     const ctx = canvas.getContext('2d')
     if (!ctx) {
       console.warn('Contexto de canvas no disponible')
       return
     }
-
     try {
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
       const allTransparent = imageData.data.every((val, i) => i % 4 === 3 ? val === 0 : true)
-
       if (allTransparent) {
         console.warn('Canvas vacío o completamente transparente')
         return
       }
-
-      // Si es JPG, rellenamos los espacios transparentes con negro o blanco según invert
       if (format === 'jpg') {
         const tempCanvas = document.createElement('canvas')
         const tempCtx = tempCanvas.getContext('2d')
         tempCanvas.width = canvas.width
         tempCanvas.height = canvas.height
-        
-        // Rellenar con blanco si invert, negro si no
         tempCtx.fillStyle = settings.invert ? 'white' : 'black'
         tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height)
-        
-        // Dibujar la imagen original encima
         tempCtx.drawImage(canvas, 0, 0)
-        
         const link = document.createElement('a')
         link.download = 'dithered-image.jpg'
         link.href = tempCanvas.toDataURL('image/jpeg', 1.0)
         link.click()
       } else {
-        // PNG mantiene la transparencia
         const link = document.createElement('a')
         link.download = 'dithered-image.png'
         link.href = canvas.toDataURL('image/png')
         link.click()
       }
-      
       setShowExportPopup(false)
     } catch (err) {
       console.error('Error exportando imagen:', err)
     }
-  }, [settings.invert])
+  }, [settings, image])
 
   return (
     <div className="flex overflow-x-hidden flex-col min-h-screen text-black bg-white md:flex-row">
