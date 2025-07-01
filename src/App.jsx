@@ -62,6 +62,34 @@ function App() {
     };
   }, [isMobileMenuOpen]);
 
+  // Cargar neaCat.png por defecto si no hay imagen
+  useEffect(() => {
+    if (!image) {
+      const img = new window.Image();
+      img.onload = () => {
+        setImage(img);
+        setCanvasSize({ width: img.width, height: img.height });
+        // Ajustar zoom inicial si es necesario
+        if (canvasContainerRef.current) {
+          const containerWidth = canvasContainerRef.current.clientWidth;
+          const containerHeight = canvasContainerRef.current.clientHeight;
+          const aspectRatioImage = img.width / img.height;
+          const aspectRatioContainer = containerWidth / containerHeight;
+          let newZoom;
+          if (aspectRatioImage > aspectRatioContainer) {
+            newZoom = containerWidth / img.width;
+          } else {
+            newZoom = containerHeight / img.height;
+          }
+          setZoom(newZoom > 1 ? 1 : newZoom);
+        } else {
+          setZoom(1);
+        }
+      };
+      img.src = '/neaCat.png';
+    }
+  }, [image]);
+
   const handleImageLoad = useCallback((file) => {
     const img = new Image()
     img.onload = () => {

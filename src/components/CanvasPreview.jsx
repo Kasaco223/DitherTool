@@ -110,11 +110,7 @@ const CanvasPreview = forwardRef(({
     let processedImageData
     switch (debouncedSettings.style) {
       case 'Gradient':
-        processedImageData = applyGradient(
-          imageData,
-          debouncedSettings.contrast,
-          (typeof debouncedSettings.customNeonColors?.a === 'number' ? debouncedSettings.customNeonColors.a : 1)
-        );
+        processedImageData = applyGradient(imageData, debouncedSettings);
         break;
       case 'Atkinson':
         processedImageData = applyAtkinson(imageData, debouncedSettings)

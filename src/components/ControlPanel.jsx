@@ -392,22 +392,24 @@ const ControlPanel = ({
           <div className="slider-separator" style={{margin: '6px 0 4px 0', height: '1px'}}></div>
 
           {/* Blur Slider */}
-          <div className="mb-0.5 slider-container">
-            <div className="flex justify-between mb-0.5 mt-1">
-              <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Blur</label>
-              <span className="text-xs font-medium md:text-sm">{settings.blur}</span>
+          {settings.style !== 'Gradient' && (
+            <div className="mb-0.5 slider-container">
+              <div className="flex justify-between mb-0.5 mt-1">
+                <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Blur</label>
+                <span className="text-xs font-medium md:text-sm">{settings.blur}</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="10"
+                step="1"
+                value={settings.blur}
+                onChange={(e) => handleSliderChange('blur', e.target.value)}
+                className="slider"
+                style={getSliderBg(settings.blur, 0, 10)}
+              />
             </div>
-            <input
-              type="range"
-              min="0"
-              max="10"
-              step="1"
-              value={settings.blur}
-              onChange={(e) => handleSliderChange('blur', e.target.value)}
-              className="slider"
-              style={getSliderBg(settings.blur, 0, 10)}
-            />
-          </div>
+          )}
           <div className="slider-separator" style={{margin: '6px 0 4px 0', height: '1px'}}></div>
 
           {/* InvertShape Slider */}
