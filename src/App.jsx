@@ -157,32 +157,73 @@ function App() {
         console.warn('No se encontró el div de arte ASCII');
         return;
       }
-      // Usar el tamaño de la imagen original para exportar
-      const exportWidth = image?.width || asciiDiv.scrollWidth;
-      const exportHeight = image?.height || asciiDiv.scrollHeight;
-      const prevWidth = asciiDiv.style.width;
-      const prevHeight = asciiDiv.style.height;
+      // Guardar estilos originales de display y alineación
       const prevDisplay = asciiDiv.style.display;
-      const prevMargin = asciiDiv.style.margin;
-      asciiDiv.style.width = exportWidth + 'px';
-      asciiDiv.style.height = exportHeight + 'px';
+      const prevAlignItems = asciiDiv.style.alignItems;
+      const prevJustifyContent = asciiDiv.style.justifyContent;
+      // Aplicar centrado flex
       asciiDiv.style.display = 'flex';
       asciiDiv.style.alignItems = 'center';
       asciiDiv.style.justifyContent = 'center';
-      asciiDiv.style.margin = '0 auto';
+      // Obtener el tamaño real del bloque ASCII
+      const asciiContent = asciiDiv.firstElementChild || asciiDiv;
+      const contentWidth = asciiContent.scrollWidth;
+      const contentHeight = asciiContent.scrollHeight;
+      // Usar el tamaño de la imagen original para exportar
+      const exportWidth = image?.width || asciiDiv.scrollWidth;
+      const exportHeight = image?.height || asciiDiv.scrollHeight;
+      // Calcular los factores de escala para llenar el área de exportación, con margen de seguridad
+      const scaleX = (exportWidth / contentWidth) * 0.98;
+      const scaleY = (exportHeight / contentHeight) * 0.98;
+      // Guardar el valor original de letter-spacing
+      const prevLetterSpacing = asciiDiv.style.letterSpacing;
+      // Guardar estilos originales
+      const prevStyles = {
+        width: asciiDiv.style.width,
+        height: asciiDiv.style.height,
+        display: asciiDiv.style.display,
+        alignItems: asciiDiv.style.alignItems,
+        justifyContent: asciiDiv.style.justifyContent,
+        margin: asciiDiv.style.margin,
+        textAlign: asciiDiv.style.textAlign,
+      };
+      // Guardar el valor original de transform
+      const prevTransform = asciiDiv.style.transform;
+      const prevTransformOrigin = asciiDiv.style.transformOrigin;
+      // Aplicar el escalado proporcional en ambos ejes
+      asciiDiv.style.transform = `scale(${scaleX}, ${scaleY})`;
+      asciiDiv.style.transformOrigin = 'center';
+      // Calcular el letter-spacing necesario tras el escalado
+      const charsPerLine = asciiContent.textContent.split('\n')[0]?.length || 1;
+      const scaledCharWidth = (contentWidth * scaleX) / charsPerLine;
+      const desiredCharWidth = exportWidth / charsPerLine;
+      const letterSpacing = desiredCharWidth - scaledCharWidth;
+      asciiDiv.style.letterSpacing = `${letterSpacing}px`;
+      // Guardar el fondo original
+      const prevBackground = asciiDiv.style.background;
+      // Si es PNG, poner fondo transparente
+      if (format === 'png') {
+        asciiDiv.style.background = 'transparent';
+      }
       // Usar html2canvas
       try {
         const canvas = await html2canvas(asciiDiv, {
-          backgroundColor: settings.invert ? '#fff' : '#000',
+          backgroundColor: format === 'png' ? null : (settings.invert ? '#fff' : '#000'),
           width: exportWidth,
           height: exportHeight,
           scale: 1
         });
-        // Restaurar tamaño original
-        asciiDiv.style.width = prevWidth;
-        asciiDiv.style.height = prevHeight;
+        // Restaurar estilos originales
+        Object.entries(prevStyles).forEach(([key, value]) => {
+          asciiDiv.style[key] = value;
+        });
+        asciiDiv.style.transform = '';
+        asciiDiv.style.transformOrigin = '';
+        asciiDiv.style.letterSpacing = prevLetterSpacing;
         asciiDiv.style.display = prevDisplay;
-        asciiDiv.style.margin = prevMargin;
+        asciiDiv.style.alignItems = prevAlignItems;
+        asciiDiv.style.justifyContent = prevJustifyContent;
+        asciiDiv.style.background = prevBackground;
         const link = document.createElement('a');
         link.download = `ascii-art.${format}`;
         if (format === 'jpg') {
@@ -193,10 +234,16 @@ function App() {
         link.click();
         setShowExportPopup(false);
       } catch (err) {
-        asciiDiv.style.width = prevWidth;
-        asciiDiv.style.height = prevHeight;
+        Object.entries(prevStyles).forEach(([key, value]) => {
+          asciiDiv.style[key] = value;
+        });
+        asciiDiv.style.transform = '';
+        asciiDiv.style.transformOrigin = '';
+        asciiDiv.style.letterSpacing = prevLetterSpacing;
         asciiDiv.style.display = prevDisplay;
-        asciiDiv.style.margin = prevMargin;
+        asciiDiv.style.alignItems = prevAlignItems;
+        asciiDiv.style.justifyContent = prevJustifyContent;
+        asciiDiv.style.background = prevBackground;
         console.error('Error exportando arte ASCII:', err);
       }
       return;
