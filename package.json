@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm install --legacy-peer-deps && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "install:legacy": "npm install --legacy-peer-deps"
   },
   "dependencies": {
     "@react-three/drei": "^10.4.2",
