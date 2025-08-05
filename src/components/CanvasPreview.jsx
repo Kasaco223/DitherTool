@@ -56,6 +56,138 @@ function getDotPattern(size, color) {
   return imageData;
 }
 
+// Preprocesamiento para ASCII: blur + smoothness + highlights + luminanceThreshold
+function preprocessImageForAscii(imageData, { blur = 0, smoothness = 0, highlights = 0, luminanceThreshold = 0 }) {
+  const { width, height, data } = imageData;
+  let processed = new Uint8ClampedArray(data);
+
+  // BLUR (box blur simple)
+  if (blur > 0) {
+    const blurRadius = Math.ceil(blur);
+    // Blur horizontal
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        let r = 0, g = 0, b = 0, count = 0;
+        for (let dx = -blurRadius; dx <= blurRadius; dx++) {
+          const nx = x + dx;
+          if (nx >= 0 && nx < width) {
+            const idx = (y * width + nx) * 4;
+            r += processed[idx];
+            g += processed[idx + 1];
+            b += processed[idx + 2];
+            count++;
+          }
+        }
+        const idx = (y * width + x) * 4;
+        processed[idx] = r / count;
+        processed[idx + 1] = g / count;
+        processed[idx + 2] = b / count;
+      }
+    }
+    // Blur vertical
+    const temp = new Uint8ClampedArray(processed);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        let r = 0, g = 0, b = 0, count = 0;
+        for (let dy = -blurRadius; dy <= blurRadius; dy++) {
+          const ny = y + dy;
+          if (ny >= 0 && ny < height) {
+            const idx = (ny * width + x) * 4;
+            r += temp[idx];
+            g += temp[idx + 1];
+            b += temp[idx + 2];
+            count++;
+          }
+        }
+        const idx = (y * width + x) * 4;
+        processed[idx] = r / count;
+        processed[idx + 1] = g / count;
+        processed[idx + 2] = b / count;
+      }
+    }
+  }
+
+  // SMOOTHNESS (posterización)
+  if (smoothness > 0) {
+    const levels = Math.max(2, Math.round(20 - (smoothness / 10) * 18));
+    for (let i = 0; i < processed.length; i += 4) {
+      let gray = 0.299 * processed[i] + 0.587 * processed[i + 1] + 0.114 * processed[i + 2];
+      gray = Math.round((gray / 255) * (levels - 1)) / (levels - 1) * 255;
+      processed[i] = processed[i + 1] = processed[i + 2] = gray;
+    }
+  }
+
+  // HIGHLIGHTS (ajuste de brillo en áreas claras)
+  if (highlights !== 0) {
+    for (let i = 0; i < processed.length; i += 4) {
+      const luminance = 0.299 * processed[i] + 0.587 * processed[i + 1] + 0.114 * processed[i + 2];
+      if (luminance > 128) { // Solo áreas claras
+        const factor = 1 + (highlights / 100);
+        processed[i] = Math.min(255, processed[i] * factor);
+        processed[i + 1] = Math.min(255, processed[i + 1] * factor);
+        processed[i + 2] = Math.min(255, processed[i + 2] * factor);
+      }
+    }
+  }
+
+  // LUMINANCE THRESHOLD (umbral de luminancia)
+  if (luminanceThreshold > 0) {
+    const threshold = luminanceThreshold / 100;
+    for (let i = 0; i < processed.length; i += 4) {
+      const luminance = 0.299 * processed[i] + 0.587 * processed[i + 1] + 0.114 * processed[i + 2];
+      const normalizedLuminance = luminance / 255;
+      
+      if (normalizedLuminance > threshold) {
+        // Áreas por encima del umbral se vuelven más claras
+        const factor = 1 + (normalizedLuminance - threshold) * 2;
+        processed[i] = Math.min(255, processed[i] * factor);
+        processed[i + 1] = Math.min(255, processed[i + 1] * factor);
+        processed[i + 2] = Math.min(255, processed[i + 2] * factor);
+      } else {
+        // Áreas por debajo del umbral se vuelven más oscuras
+        const factor = normalizedLuminance / threshold;
+        processed[i] = processed[i] * factor;
+        processed[i + 1] = processed[i + 1] * factor;
+        processed[i + 2] = processed[i + 2] * factor;
+      }
+    }
+  }
+
+  return new ImageData(processed, width, height);
+}
+
+function getAsciiFontColor({ useCustomColors, customNeonColors, invert, opacity = 1 }) {
+  let r = 255, g = 255, b = 255, a = opacity;
+  if (useCustomColors && customNeonColors) {
+    // HSV a RGB
+    function hsvToRgb(h, s, v) {
+      s /= 100; v /= 100;
+      let c = v * s;
+      let x = c * (1 - Math.abs((h / 60) % 2 - 1));
+      let m = v - c;
+      let r = 0, g = 0, b = 0;
+      if (h < 60) { r = c; g = x; b = 0; }
+      else if (h < 120) { r = x; g = c; b = 0; }
+      else if (h < 180) { r = 0; g = c; b = x; }
+      else if (h < 240) { r = 0; g = x; b = c; }
+      else if (h < 300) { r = x; g = 0; b = c; }
+      else { r = c; g = 0; b = x; }
+      r = Math.round((r + m) * 255);
+      g = Math.round((g + m) * 255);
+      b = Math.round((b + m) * 255);
+      return [r, g, b];
+    }
+    [r, g, b] = hsvToRgb(customNeonColors.h, customNeonColors.s, customNeonColors.v);
+    a = typeof customNeonColors.a === 'number' ? customNeonColors.a : opacity;
+  }
+  if (invert) {
+    r = 255 - r;
+    g = 255 - g;
+    b = 255 - b;
+  }
+  return `rgba(${r},${g},${b},${a})`;
+}
+
 const CanvasPreview = forwardRef(({
   image,
   settings,
@@ -109,45 +241,34 @@ const CanvasPreview = forwardRef(({
       ctx.drawImage(image, 0, 0);
       let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       // Invertir colores si invertShape > 0
-    if (debouncedSettings.invertShape > 0) {
-      const data = imageData.data;
-      const amount = debouncedSettings.invertShape / 100;
-      for (let i = 0; i < data.length; i += 4) {
-        data[i] = data[i] + (255 - 2 * data[i]) * amount; // Red
-        data[i + 1] = data[i + 1] + (255 - 2 * data[i + 1]) * amount; // Green
-        data[i + 2] = data[i + 2] + (255 - 2 * data[i + 2]) * amount; // Blue
-      }
-    }
-      // Determinar color personalizado si useCustomColors está activo
-      let asciiColor = debouncedSettings.invert ? '#000' : '#fff';
-      if (debouncedSettings.useCustomColors && debouncedSettings.customNeonColors) {
-        // Convertir HSV a HEX o RGB
-        const { h, s, v } = debouncedSettings.customNeonColors;
-        // Conversión HSV a RGB
-        function hsvToRgb(h, s, v) {
-          s /= 100; v /= 100;
-          let c = v * s;
-          let x = c * (1 - Math.abs((h / 60) % 2 - 1));
-          let m = v - c;
-          let r = 0, g = 0, b = 0;
-          if (h < 60) { r = c; g = x; b = 0; }
-          else if (h < 120) { r = x; g = c; b = 0; }
-          else if (h < 180) { r = 0; g = c; b = x; }
-          else if (h < 240) { r = 0; g = x; b = c; }
-          else if (h < 300) { r = x; g = 0; b = c; }
-          else { r = c; g = 0; b = x; }
-          r = Math.round((r + m) * 255);
-          g = Math.round((g + m) * 255);
-          b = Math.round((b + m) * 255);
-          return `rgb(${r},${g},${b})`;
+      if (debouncedSettings.invertShape > 0) {
+        const data = imageData.data;
+        const amount = debouncedSettings.invertShape / 100;
+        for (let i = 0; i < data.length; i += 4) {
+          data[i] = data[i] + (255 - 2 * data[i]) * amount; // Red
+          data[i + 1] = data[i + 1] + (255 - 2 * data[i + 1]) * amount; // Green
+          data[i + 2] = data[i + 2] + (255 - 2 * data[i + 2]) * amount; // Blue
         }
-        asciiColor = hsvToRgb(h, s, v);
       }
-      // Aquí puedes aplicar otros sliders (contraste, brillo, etc.) si tienes funciones utilitarias
-      // Por ahora, solo se pasa el imageData modificado a ASCII
+      // PREPROCESAMIENTO: blur + smoothness
+      const preprocessedImageData = preprocessImageForAscii(imageData, {
+        blur: debouncedSettings.blur,
+        smoothness: debouncedSettings.smoothness,
+        highlights: debouncedSettings.highlights,
+        luminanceThreshold: debouncedSettings.luminanceThreshold
+      });
+      // Determinar color personalizado si useCustomColors está activo
+      const asciiColor = getAsciiFontColor({
+        useCustomColors: debouncedSettings.useCustomColors,
+        customNeonColors: debouncedSettings.customNeonColors,
+        invert: debouncedSettings.invert,
+        opacity: (debouncedSettings.useCustomColors && debouncedSettings.customNeonColors && typeof debouncedSettings.customNeonColors.a === 'number')
+          ? debouncedSettings.customNeonColors.a
+          : 1
+      });
       const columns = Math.floor(image.width / N);
       const rows = Math.floor(image.height / N);
-      imageDataToAsciiHTML(imageData, {
+      imageDataToAsciiHTML(preprocessedImageData, {
         width: columns,
         height: rows,
         contrast: 1 + debouncedSettings.contrast / 100,
@@ -160,7 +281,7 @@ const CanvasPreview = forwardRef(({
         color: asciiColor,
       })
         .then(html => setAsciiHTML(html))
-        .catch(() => setAsciiHTML('<pre style=\"color:red\">Error generando ASCII</pre>'));
+        .catch(() => setAsciiHTML('<pre style="color:red">Error generando ASCII</pre>'));
       return;
     } else {
       setAsciiHTML(null); // Limpiar arte ASCII al cambiar de filtro
@@ -186,6 +307,11 @@ const CanvasPreview = forwardRef(({
         break
     }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Fondo blanco para preview de Atkinson, Floyd-Steinberg o Stippling con invert activo
+    if ((debouncedSettings.style === 'Atkinson' || debouncedSettings.style === 'Floyd-Steinberg' || debouncedSettings.style === 'Stippling') && debouncedSettings.invert && !debouncedSettings.isExporting) {
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
     ctx.putImageData(processedImageData, 0, 0);
   }, [image, settings, useCustomColors, customNeonColors])
 
@@ -219,36 +345,25 @@ const CanvasPreview = forwardRef(({
           data[i + 2] = data[i + 2] + (255 - 2 * data[i + 2]) * amount; // Blue
         }
       }
+      // PREPROCESAMIENTO: blur + smoothness
+      const preprocessedImageData = preprocessImageForAscii(imageData, {
+        blur: debouncedSettings.blur,
+        smoothness: debouncedSettings.smoothness,
+        highlights: debouncedSettings.highlights,
+        luminanceThreshold: debouncedSettings.luminanceThreshold
+      });
       // Determinar color personalizado si useCustomColors está activo
-      let asciiColor = debouncedSettings.invert ? '#000' : '#fff';
-      if (debouncedSettings.useCustomColors && debouncedSettings.customNeonColors) {
-        // Convertir HSV a HEX o RGB
-        const { h, s, v } = debouncedSettings.customNeonColors;
-        // Conversión HSV a RGB
-        function hsvToRgb(h, s, v) {
-          s /= 100; v /= 100;
-          let c = v * s;
-          let x = c * (1 - Math.abs((h / 60) % 2 - 1));
-          let m = v - c;
-          let r = 0, g = 0, b = 0;
-          if (h < 60) { r = c; g = x; b = 0; }
-          else if (h < 120) { r = x; g = c; b = 0; }
-          else if (h < 180) { r = 0; g = c; b = x; }
-          else if (h < 240) { r = 0; g = x; b = c; }
-          else if (h < 300) { r = x; g = 0; b = c; }
-          else { r = c; g = 0; b = x; }
-          r = Math.round((r + m) * 255);
-          g = Math.round((g + m) * 255);
-          b = Math.round((b + m) * 255);
-          return `rgb(${r},${g},${b})`;
-        }
-        asciiColor = hsvToRgb(h, s, v);
-      }
-      // Aquí puedes aplicar otros sliders (contraste, brillo, etc.) si tienes funciones utilitarias
-      // Por ahora, solo se pasa el imageData modificado a ASCII
+      const asciiColor = getAsciiFontColor({
+        useCustomColors: debouncedSettings.useCustomColors,
+        customNeonColors: debouncedSettings.customNeonColors,
+        invert: debouncedSettings.invert,
+        opacity: (debouncedSettings.useCustomColors && debouncedSettings.customNeonColors && typeof debouncedSettings.customNeonColors.a === 'number')
+          ? debouncedSettings.customNeonColors.a
+          : 1
+      });
       const columns = Math.floor(image.width / N);
       const rows = Math.floor(image.height / N);
-      imageDataToAsciiHTML(imageData, {
+      imageDataToAsciiHTML(preprocessedImageData, {
         width: columns,
         height: rows,
         contrast: 1 + debouncedSettings.contrast / 100,
@@ -261,9 +376,9 @@ const CanvasPreview = forwardRef(({
         color: asciiColor,
       })
         .then(html => setAsciiHTML(html))
-        .catch(() => setAsciiHTML('<pre style=\"color:red\">Error generando ASCII</pre>'));
+        .catch(() => setAsciiHTML('<pre style="color:red">Error generando ASCII</pre>'));
     }
-  }, [image, debouncedSettings.style, N, charSize, debouncedSettings.contrast, debouncedSettings.midtones, debouncedSettings.invert, debouncedSettings.scale, debouncedSettings.invertShape, debouncedSettings.useCustomColors, debouncedSettings.customNeonColors]);
+  }, [image, debouncedSettings.style, N, charSize, debouncedSettings.contrast, debouncedSettings.midtones, debouncedSettings.invert, debouncedSettings.scale, debouncedSettings.invertShape, debouncedSettings.useCustomColors, debouncedSettings.customNeonColors, debouncedSettings.blur, debouncedSettings.smoothness, debouncedSettings.highlights, debouncedSettings.luminanceThreshold]);
 
   // Pan: Mouse events
   const handleMouseDown = (e) => {
@@ -354,7 +469,15 @@ const CanvasPreview = forwardRef(({
             dangerouslySetInnerHTML={{ __html: asciiHTML }}
           />
         ) : (
-          <canvas ref={canvasRef} style={{ display: 'block', transform: `scale(${zoom})`, transformOrigin: 'center' }} />
+          <canvas
+            ref={canvasRef}
+            style={{
+              display: 'block',
+              transform: `scale(${zoom})`,
+              transformOrigin: 'center',
+              background: (debouncedSettings.invert && ['Floyd-Steinberg', 'Atkinson', 'Smooth Diffuse', 'Gradient'].includes(debouncedSettings.style)) ? '#fff' : 'transparent'
+            }}
+          />
         )}
       </div>
     </div>

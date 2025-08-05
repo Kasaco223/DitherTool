@@ -10,6 +10,7 @@ export function applyFloydSteinberg(imageData, settings) {
     luminanceThreshold, 
     blur, 
     invert,
+    invertShape = 0,
     useCustomColors,
     customNeonColors
   } = settings
@@ -100,6 +101,16 @@ export function applyFloydSteinberg(imageData, settings) {
         processedData[idx + 1] = g / count
         processedData[idx + 2] = b / count
       }
+    }
+  }
+
+  // Apply invertShape (contrast inversion)
+  if (invertShape > 0) {
+    const amount = invertShape / 100;
+    for (let i = 0; i < processedData.length; i += 4) {
+      processedData[i] = processedData[i] + (255 - 2 * processedData[i]) * amount; // Red
+      processedData[i + 1] = processedData[i + 1] + (255 - 2 * processedData[i + 1]) * amount; // Green
+      processedData[i + 2] = processedData[i + 2] + (255 - 2 * processedData[i + 2]) * amount; // Blue
     }
   }
 
@@ -283,19 +294,14 @@ export function applyFloydSteinberg(imageData, settings) {
         if (useCustomColors && typeof customNeonColors.a === 'number') {
           resultData[outputPixelIdx + 3] = Math.round(customNeonColors.a * 255);
         } else {
-          resultData[outputPixelIdx + 3] = 255; // Opaco si no es custom color
+          resultData[outputPixelIdx + 3] = 255;
         }
       } else {
-        if (useCustomColors && invert) {
-          resultData[outputPixelIdx] = 0;
-          resultData[outputPixelIdx + 1] = 0;
-          resultData[outputPixelIdx + 2] = 0;
-      } else {
+        // Fondo siempre transparente, igual que stippling
         resultData[outputPixelIdx] = 0;
         resultData[outputPixelIdx + 1] = 0;
         resultData[outputPixelIdx + 2] = 0;
-        }
-        resultData[outputPixelIdx + 3] = 0; // Totalmente transparente
+        resultData[outputPixelIdx + 3] = 0;
       }
     }
     finalImageData = new ImageData(resultData, width, height)

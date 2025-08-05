@@ -7,6 +7,7 @@ export function applyAtkinson(imageData, settings) {
     highlights,
     luminanceThreshold,
     invert,
+    invertShape = 0,
     useCustomColors,
     customNeonColors,
     scale,
@@ -86,6 +87,16 @@ export function applyAtkinson(imageData, settings) {
         processedData[idx + 1] = g / count;
         processedData[idx + 2] = b / count;
       }
+    }
+  }
+
+  // Apply invertShape (contrast inversion)
+  if (invertShape > 0) {
+    const amount = invertShape / 100;
+    for (let i = 0; i < processedData.length; i += 4) {
+      processedData[i] = processedData[i] + (255 - 2 * processedData[i]) * amount; // Red
+      processedData[i + 1] = processedData[i + 1] + (255 - 2 * processedData[i + 1]) * amount; // Green
+      processedData[i + 2] = processedData[i + 2] + (255 - 2 * processedData[i + 2]) * amount; // Blue
     }
   }
 

@@ -4,6 +4,25 @@ import ControlPanel from './components/ControlPanel'
 import ExportOptionsPopup from './components/ExportOptionsPopup'
 import html2canvas from 'html2canvas'
 
+// Función auxiliar para convertir HSV a RGB
+function hsvToRgb(h, s, v) {
+  s /= 100; v /= 100;
+  let c = v * s;
+  let x = c * (1 - Math.abs((h / 60) % 2 - 1));
+  let m = v - c;
+  let r = 0, g = 0, b = 0;
+  if (h < 60) { r = c; g = x; b = 0; }
+  else if (h < 120) { r = x; g = c; b = 0; }
+  else if (h < 180) { r = 0; g = c; b = x; }
+  else if (h < 240) { r = 0; g = x; b = c; }
+  else if (h < 300) { r = x; g = 0; b = c; }
+  else { r = c; g = 0; b = x; }
+  r = Math.round((r + m) * 255);
+  g = Math.round((g + m) * 255);
+  b = Math.round((b + m) * 255);
+  return [r, g, b];
+}
+
 // Hook para detectar mobile
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -122,7 +141,69 @@ function App() {
   }, [])
 
   const handleSettingsChange = useCallback((newSettings) => {
-    setSettings(prev => ({ ...prev, ...newSettings }))
+    setSettings(prev => {
+      // Si se está cambiando el estilo, hacer reset automático
+      if (newSettings.style && newSettings.style !== prev.style) {
+        // Valores por defecto según el filtro
+        let defaultSettings = {
+          scale: 1,
+          smoothness: 5,
+          contrast: 0,
+          midtones: 65,
+          highlights: 100,
+          luminanceThreshold: 50,
+          blur: 0,
+          invert: false,
+          invertShape: 0,
+          style: newSettings.style
+        }
+        
+        // Valores específicos para Smooth Diffuse
+        if (newSettings.style === 'Smooth Diffuse') {
+          defaultSettings.scale = 0.1;
+          defaultSettings.smoothness = 0;
+        }
+        
+        // Valores específicos para Stippling
+        if (newSettings.style === 'Stippling') {
+          defaultSettings.scale = 0.5;
+          defaultSettings.smoothness = 0;
+          defaultSettings.contrast = -100;
+          defaultSettings.midtones = 53;
+          defaultSettings.highlights = 91;
+          defaultSettings.luminanceThreshold = 45;
+          defaultSettings.blur = 3;
+          defaultSettings.invertShape = 0;
+        }
+        
+        // Valores específicos para Gradient
+        if (newSettings.style === 'Gradient') {
+          defaultSettings.scale = 0.9;
+          defaultSettings.smoothness = 3;
+          defaultSettings.contrast = -100;
+          defaultSettings.midtones = 88;
+          defaultSettings.highlights = 100;
+          defaultSettings.luminanceThreshold = 46;
+          defaultSettings.invertShape = 0;
+        }
+        
+        // Valores específicos para ASCII
+        if (newSettings.style === 'ASCII') {
+          defaultSettings.scale = 1;
+          defaultSettings.smoothness = 1;
+          defaultSettings.contrast = 46;
+          defaultSettings.midtones = 20;
+          defaultSettings.highlights = 72;
+          defaultSettings.luminanceThreshold = 8;
+          defaultSettings.blur = 0;
+          defaultSettings.invertShape = 0;
+        }
+        
+        return defaultSettings;
+      }
+      // Para otros cambios, aplicar normalmente
+      return { ...prev, ...newSettings }
+    })
   }, [])
 
   // New handler for custom color toggle
@@ -201,17 +282,66 @@ function App() {
       asciiDiv.style.letterSpacing = `${letterSpacing}px`;
       // Guardar el fondo original
       const prevBackground = asciiDiv.style.background;
-      // Si es PNG, poner fondo transparente
+      // Si es PNG, crear canvas transparente manualmente
       if (format === 'png') {
-        asciiDiv.style.background = 'transparent';
+        // Crear canvas transparente
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCanvas.width = exportWidth;
+        tempCanvas.height = exportHeight;
+        
+        // Obtener el contenido ASCII como texto
+        const asciiText = asciiDiv.textContent || asciiDiv.innerText;
+        const lines = asciiText.split('\n');
+        
+        // Obtener el tamaño de fuente del div ASCII
+        const computedStyle = window.getComputedStyle(asciiDiv);
+        const fontSize = parseInt(computedStyle.fontSize) || 12;
+        
+        // Configurar el contexto para dibujar texto
+        tempCtx.font = `${fontSize}px monospace`;
+        tempCtx.textBaseline = 'top';
+        
+        // Determinar color del texto
+        let textColor = '#fff';
+        if (useCustomColors && customNeonColors) {
+          const [r, g, b] = hsvToRgb(customNeonColors.h, customNeonColors.s, customNeonColors.v);
+          if (settings.invert) {
+            textColor = `rgb(${255-r}, ${255-g}, ${255-b})`;
+          } else {
+            textColor = `rgb(${r}, ${g}, ${b})`;
+          }
+        } else if (settings.invert) {
+          textColor = '#000';
+        }
+        
+        tempCtx.fillStyle = textColor;
+        
+        // Dibujar cada línea de texto
+        const lineHeight = fontSize * 0.6;
+        for (let i = 0; i < lines.length; i++) {
+          tempCtx.fillText(lines[i], 0, i * lineHeight);
+        }
+        
+        const link = document.createElement('a');
+        link.download = `ascii-art.png`;
+        link.href = tempCanvas.toDataURL('image/png');
+        link.click();
+        setShowExportPopup(false);
+        return;
       }
-      // Usar html2canvas
+      
+      // Para JPG, usar html2canvas normal
       try {
         const canvas = await html2canvas(asciiDiv, {
-          backgroundColor: format === 'png' ? null : (settings.invert ? '#fff' : '#000'),
+          backgroundColor: settings.invert ? '#fff' : '#000',
           width: exportWidth,
           height: exportHeight,
-          scale: 1
+          scale: 1,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          removeContainer: true
         });
         // Restaurar estilos originales
         Object.entries(prevStyles).forEach(([key, value]) => {
@@ -279,16 +409,49 @@ function App() {
         link.href = tempCanvas.toDataURL('image/jpeg', 1.0)
         link.click()
       } else {
-        const link = document.createElement('a')
-        link.download = 'dithered-image.png'
-        link.href = canvas.toDataURL('image/png')
-        link.click()
+        // Para PNG, regenerar la imagen con isExporting=true para Stippling
+        if (settings.style === 'Stippling') {
+          // Crear un canvas temporal con la imagen regenerada
+          const tempCanvas = document.createElement('canvas')
+          const tempCtx = tempCanvas.getContext('2d')
+          tempCanvas.width = canvas.width
+          tempCanvas.height = canvas.height
+          
+          // Regenerar la imagen con isExporting=true
+          const exportSettings = { ...settings, isExporting: true }
+          const exportImageData = await regenerateStipplingImage(image, exportSettings)
+          tempCtx.putImageData(exportImageData, 0, 0)
+          
+          const link = document.createElement('a')
+          link.download = 'dithered-image.png'
+          link.href = tempCanvas.toDataURL('image/png')
+          link.click()
+        } else {
+          const link = document.createElement('a')
+          link.download = 'dithered-image.png'
+          link.href = canvas.toDataURL('image/png')
+          link.click()
+        }
       }
       setShowExportPopup(false)
     } catch (err) {
       console.error('Error exportando imagen:', err)
     }
-  }, [settings, image])
+  }, [settings, image, useCustomColors, customNeonColors])
+
+  // Función auxiliar para regenerar imagen Stippling con isExporting
+  const regenerateStipplingImage = async (image, exportSettings) => {
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    canvas.width = image.width
+    canvas.height = image.height
+    ctx.drawImage(image, 0, 0)
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+    
+    // Importar y aplicar Stippling con isExporting
+    const { applyStippling } = await import('./utils/stippling.js')
+    return applyStippling(imageData, exportSettings)
+  }
 
   return (
     <div className="flex overflow-x-hidden flex-col min-h-screen text-black bg-white md:flex-row">

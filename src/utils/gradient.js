@@ -67,12 +67,16 @@ export function applyGradient(imageData, settings) {
     highlights = 100,
     blur = 0,
     invert = false,
+    invertShape = 0,
     useCustomColors = false,
     customNeonColors = { h: 300, s: 100, v: 100 }
   } = settings;
 
-  // Fondo blanco
-  const alpha = 255; // Siempre opaco, la opacidad ya se aplicó antes si era necesario
+  // Determinar opacidad basada en colores personalizados
+  let alpha = 255; // Por defecto opaco
+  if (useCustomColors && customNeonColors && typeof customNeonColors.a === 'number') {
+    alpha = Math.round(customNeonColors.a * 255);
+  }
 
   // --- ZOOM SOLO EN EL PATRÓN DE BANDAS ---
   // scale: 1.0 = 1x (bandas normales), scale: 0.1 = 8x (bandas 8 veces más gruesas)
@@ -156,6 +160,16 @@ export function applyGradient(imageData, settings) {
     }
   }
 
+  // Apply invertShape to the base image data first
+  if (invertShape > 0) {
+    const amount = invertShape / 100;
+    for (let i = 0; i < lowQualityData.length; i += 4) {
+      lowQualityData[i] = lowQualityData[i] + (255 - 2 * lowQualityData[i]) * amount; // Red
+      lowQualityData[i + 1] = lowQualityData[i + 1] + (255 - 2 * lowQualityData[i + 1]) * amount; // Green
+      lowQualityData[i + 2] = lowQualityData[i + 2] + (255 - 2 * lowQualityData[i + 2]) * amount; // Blue
+    }
+  }
+
   // Procesar la imagen de baja calidad en vez de la original
   const processed = new Float32Array(width * height);
   for (let i = 0; i < width * height; i++) {
@@ -177,9 +191,9 @@ export function applyGradient(imageData, settings) {
   let maskSum = 0;
 
   if (quality === height) {
-    // Fuerza la máscara: mitad superior 1, mitad inferior 0 (o viceversa si invert)
+    // Fuerza la máscara: mitad superior 1, mitad inferior 0
     for (let y = 0; y < height; y++) {
-      const value = invert ? (y >= height / 2 ? 1 : 0) : (y < height / 2 ? 1 : 0);
+      const value = y < height / 2 ? 1 : 0;
       for (let x = 0; x < width; x++) {
         mask[y * width + x] = value;
         maskSum += value;
@@ -187,7 +201,7 @@ export function applyGradient(imageData, settings) {
     }
   } else {
     for (let i = 0; i < width * height; i++) {
-      mask[i] = invert ? processed[i] >= threshold : processed[i] < threshold ? 1 : 0;
+      mask[i] = processed[i] < threshold ? 1 : 0;
       maskSum += mask[i];
     }
   }
@@ -204,9 +218,14 @@ export function applyGradient(imageData, settings) {
   let [r1, g1, b1] = [255, 255, 255]; // blanco
   let [r2, g2, b2] = useCustomColors ? hsvToRgb(customNeonColors.h, customNeonColors.s, customNeonColors.v) : [0, 0, 0];
 
-  // Invertir el color del degradado si invert está activo
+  // Aplicar invert a los colores si está activo
   if (invert) {
-    [r1, g1, b1, r2, g2, b2] = [r2, g2, b2, r1, g1, b1];
+    r1 = 255 - r1;
+    g1 = 255 - g1;
+    b1 = 255 - b1;
+    r2 = 255 - r2;
+    g2 = 255 - g2;
+    b2 = 255 - b2;
   }
 
   // El patrón de bandas se calcula en un espacio "virtual" escalado por zoom
@@ -224,7 +243,7 @@ export function applyGradient(imageData, settings) {
         // Usar la lógica de máscara original pero en el espacio virtual
         const idx = y * width + x;
         let lum = processed[idx];
-        const inside = x < width && (invert ? lum >= threshold : lum < threshold ? 1 : 0);
+        const inside = x < width && lum < threshold;
         if (inside && !inSegment) {
           inSegment = true;
           segStart = x;
@@ -248,7 +267,7 @@ export function applyGradient(imageData, settings) {
       for (let x = 0; x <= width; x++) {
         const idx = y * width + x;
         let lum = processed[idx];
-        const isWhite = x < width && !(invert ? lum >= threshold : lum < threshold ? 1 : 0);
+        const isWhite = x < width && lum >= threshold;
         if (isWhite && !inSegment) {
           inSegment = true;
           segStart = x;

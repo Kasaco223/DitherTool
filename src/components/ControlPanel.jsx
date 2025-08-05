@@ -177,6 +177,17 @@ const ControlPanel = ({
     onSettingsChange({ [key]: value })
   }
 
+  // Cambiar el handler para desactivar invert cuando se desactiven los custom colors
+  const handleLocalUseCustomColorsToggle = () => {
+    if (useCustomColors) {
+      // Si se apaga, también apaga invert
+      onSettingsChange({ useCustomColors: false, invert: false });
+    } else {
+      onSettingsChange({ useCustomColors: true });
+    }
+    onUseCustomColorsToggle();
+  };
+
   // Función para obtener el background del slider con gradiente
   function getSliderBg(value, min, max) {
     const percent = ((value - min) / (max - min)) * 100;
@@ -305,13 +316,13 @@ const ControlPanel = ({
             </div>
             <input
               type="range"
-              min="0"
-              max="10"
-              step="1"
+              min={settings.style === 'Gradient' ? "3" : "0"}
+              max={settings.style === 'Gradient' ? "5" : "10"}
+              step={settings.style === 'Gradient' ? "0.1" : "1"}
               value={settings.smoothness}
               onChange={(e) => handleSliderChange('smoothness', e.target.value)}
               className="slider"
-              style={getSliderBg(settings.smoothness, 0, 10)}
+              style={getSliderBg(settings.smoothness, settings.style === 'Gradient' ? 3 : 0, settings.style === 'Gradient' ? 5 : 10)}
             />
           </div>
           <div className="slider-separator" style={{margin: '6px 0 4px 0', height: '1px'}}></div>
@@ -344,53 +355,57 @@ const ControlPanel = ({
             <input
               type="range"
               min="0"
-              max="100"
+              max={settings.style === 'Gradient' ? "90" : "100"}
               step="1"
               value={settings.midtones}
               onChange={(e) => handleSliderChange('midtones', e.target.value)}
               className="slider"
-              style={getSliderBg(settings.midtones, 0, 100)}
+              style={getSliderBg(settings.midtones, 0, settings.style === 'Gradient' ? 90 : 100)}
             />
           </div>
           <div className="slider-separator" style={{margin: '6px 0 4px 0', height: '1px'}}></div>
 
           {/* Highlights Slider */}
-          <div className="mb-0.5 slider-container">
-            <div className="flex justify-between mb-0.5 mt-1">
-              <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Highlights</label>
-              <span className="text-xs font-medium md:text-sm">{settings.highlights}</span>
+          {settings.style !== 'Gradient' && (
+            <div className="mb-0.5 slider-container">
+              <div className="flex justify-between mb-0.5 mt-1">
+                <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Highlights</label>
+                <span className="text-xs font-medium md:text-sm">{settings.highlights}</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={settings.highlights}
+                onChange={(e) => handleSliderChange('highlights', e.target.value)}
+                className="slider"
+                style={getSliderBg(settings.highlights, 0, 100)}
+              />
             </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              step="1"
-              value={settings.highlights}
-              onChange={(e) => handleSliderChange('highlights', e.target.value)}
-              className="slider"
-              style={getSliderBg(settings.highlights, 0, 100)}
-            />
-          </div>
-          <div className="slider-separator" style={{margin: '6px 0 4px 0', height: '1px'}}></div>
+          )}
+          {settings.style !== 'Gradient' && <div className="slider-separator" style={{margin: '6px 0 4px 0', height: '1px'}}></div>}
 
           {/* Luminance Threshold Slider */}
-          <div className="mb-0.5 slider-container">
-            <div className="flex justify-between mb-0.5 mt-1">
-              <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Luminance Threshold</label>
-              <span className="text-xs font-medium md:text-sm">{settings.luminanceThreshold}</span>
+          {settings.style !== 'Gradient' && (
+            <div className="mb-0.5 slider-container">
+              <div className="flex justify-between mb-0.5 mt-1">
+                <label className="text-xs font-medium tracking-wide uppercase md:text-sm">Luminance Threshold</label>
+                <span className="text-xs font-medium md:text-sm">{settings.luminanceThreshold}</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={settings.luminanceThreshold}
+                onChange={(e) => handleSliderChange('luminanceThreshold', e.target.value)}
+                className="slider"
+                style={getSliderBg(settings.luminanceThreshold, 0, 100)}
+              />
             </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              step="1"
-              value={settings.luminanceThreshold}
-              onChange={(e) => handleSliderChange('luminanceThreshold', e.target.value)}
-              className="slider"
-              style={getSliderBg(settings.luminanceThreshold, 0, 100)}
-            />
-          </div>
-          <div className="slider-separator" style={{margin: '6px 0 4px 0', height: '1px'}}></div>
+          )}
+          {settings.style !== 'Gradient' && <div className="slider-separator" style={{margin: '6px 0 4px 0', height: '1px'}}></div>}
 
           {/* Blur Slider */}
           {settings.style !== 'Gradient' && (
@@ -414,26 +429,28 @@ const ControlPanel = ({
           <div className="slider-separator" style={{margin: '6px 0 4px 0', height: '1px'}}></div>
 
           {/* InvertShape Slider */}
-          <div className="mb-3 md:mb-4">
-            <label
-              htmlFor="invertShape-slider"
-              className="flex justify-between mb-2 text-xs font-medium tracking-wide uppercase md:text-sm"
-            >
-              <span>Invert Shape</span>
-              <span>{settings.invertShape}</span>
-            </label>
-            <input
-              id="invertShape-slider"
-              type="range"
-              min="0"
-              max="100"
-              step="1"
-              value={settings.invertShape}
-              onChange={(e) => handleSliderChange('invertShape', e.target.value)}
-              className="slider"
-              style={getSliderBg(settings.invertShape, 0, 100)}
-            />
-          </div>
+          {settings.style !== 'Gradient' && (
+            <div className="mb-3 md:mb-4">
+              <label
+                htmlFor="invertShape-slider"
+                className="flex justify-between mb-2 text-xs font-medium tracking-wide uppercase md:text-sm"
+              >
+                <span>Invert Shape</span>
+                <span>{settings.invertShape}</span>
+              </label>
+              <input
+                id="invertShape-slider"
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={settings.invertShape}
+                onChange={(e) => handleSliderChange('invertShape', e.target.value)}
+                className="slider"
+                style={getSliderBg(settings.invertShape, 0, 100)}
+              />
+            </div>
+          )}
         </div>
         {/* --- BLOQUE CUSTOM COLORS ABAJO --- */}
         <div className="mt-1">
@@ -442,7 +459,7 @@ const ControlPanel = ({
               type="checkbox"
               id="useCustomColors"
               checked={useCustomColors}
-              onChange={onUseCustomColorsToggle}
+              onChange={handleLocalUseCustomColorsToggle}
               className="w-4 h-4 rounded-none border-gray-200 focus:ring-black focus:ring-offset-0"
             />
             <label htmlFor="useCustomColors" className="text-xs font-medium tracking-wide uppercase md:text-sm">
@@ -522,6 +539,7 @@ const ControlPanel = ({
                   type="checkbox"
                   id="invert"
                   checked={settings.invert}
+                  disabled={!useCustomColors}
                   onChange={(e) => handleToggleChange('invert', e.target.checked)}
                   className="w-4 h-4 rounded-none border-gray-200 focus:ring-black focus:ring-offset-0"
                 />
@@ -538,7 +556,10 @@ const ControlPanel = ({
         onClick={() => {
           onSettingsChange(DEFAULT_SETTINGS);
           safeSetCustomNeonColor(DEFAULT_CUSTOM_NEON_COLORS);
-          if (useCustomColors) onUseCustomColorsToggle();
+          // Forzar que useCustomColors se apague
+          if (useCustomColors) {
+            onUseCustomColorsToggle();
+          }
         }}
         className="w-full px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm uppercase tracking-wider border border-black text-black bg-white hover:bg-gray-100 mt-8"
       >
