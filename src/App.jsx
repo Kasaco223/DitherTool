@@ -2,7 +2,9 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import CanvasPreview from './components/CanvasPreview'
 import ControlPanel from './components/ControlPanel'
 import ExportOptionsPopup from './components/ExportOptionsPopup'
+import Model3DViewer from './components/Model3DViewer'
 import html2canvas from 'html2canvas'
+import { createRotationDebounce } from './utils/threeToCanvas'
 
 // Función auxiliar para convertir HSV a RGB
 function hsvToRgb(h, s, v) {
@@ -54,12 +56,25 @@ function App() {
 
   // New state for custom colors (single color)
   const [useCustomColors, setUseCustomColors] = useState(false);
+  const [useOriginalColors, setUseOriginalColors] = useState(false);
   const [customNeonColors, setCustomNeonColors] = useState({ h: 300, s: 100, v: 100 }); // Magenta Neón por defecto
 
   const [offset, setOffset] = useState({ x: 0, y: 0 });
 
+  // 3D Model states
+  const [modelUrl, setModelUrl] = useState(null)
+  const [is3DMode, setIs3DMode] = useState(false)
+  const [modelRotation, setModelRotation] = useState({ x: 0, y: 0, z: 0 })
+  const [modelPositionOffset, setModelPositionOffset] = useState({ x: 0, y: 0, z: 0 })
+  const [isRotating, setIsRotating] = useState(false)
+  const [model3DImageData, setModel3DImageData] = useState(null)
+
   const canvasRef = useRef(null)
   const canvasContainerRef = useRef(null) // New ref for the canvas container
+  const rotationDebounceRef = useRef(null)
+  const modelBlobUrlRef = useRef(null)
+  const imageObjectUrlRef = useRef(null)
+  const controlsApiRef = useRef(null)
 
   const [menuMinimized, setMenuMinimized] = useState(false);
   const [minimizeButtonAlignUp, setMinimizeButtonAlignUp] = useState(false);
@@ -115,6 +130,16 @@ function App() {
     img.onload = () => {
       setImage(img)
       setCanvasSize({ width: img.width, height: img.height })
+      // Salir de modo 3D si estaba activo
+      setIs3DMode(false)
+      setModel3DImageData(null)
+      if (modelBlobUrlRef.current) {
+        try { URL.revokeObjectURL(modelBlobUrlRef.current) } catch (_) {}
+        modelBlobUrlRef.current = null
+      }
+      setModelUrl(null)
+      // Liberar URL blob una vez cargada
+      try { URL.revokeObjectURL(img.src) } catch (_) {}
 
       // Calculate initial zoom to fit image in container
       if (canvasContainerRef.current) {
@@ -137,7 +162,9 @@ function App() {
         setZoom(1)
       }
     }
-    img.src = URL.createObjectURL(file)
+    const objectUrl = URL.createObjectURL(file)
+    imageObjectUrlRef.current = objectUrl
+    img.src = objectUrl
   }, [])
 
   const handleSettingsChange = useCallback((newSettings) => {
@@ -187,16 +214,30 @@ function App() {
           defaultSettings.invertShape = 0;
         }
         
+        // Valores específicos para ASCII en modo 3D
+        if (newSettings.style === 'ASCII' && is3DMode) {
+          defaultSettings.scale = 1.0;
+          defaultSettings.contrast = 20;      // Aumentar contraste para mejor definición
+          defaultSettings.midtones = 60;      // Ajuste de tonos medios
+          defaultSettings.highlights = 100;    // Máximos brillos
+          defaultSettings.blur = 1;           // Ligero desenfoque para suavizar
+          defaultSettings.smoothness = 3;      // Suavizado moderado
+          defaultSettings.luminanceThreshold = 40; // Umbral de luminancia ajustado
+          defaultSettings.invert = false;      // Por defecto, no invertir
+          defaultSettings.invertShape = 100;   // Invertir forma al 100% por defecto en 3D
+        }
+        
         // Valores específicos para ASCII
         if (newSettings.style === 'ASCII') {
           defaultSettings.scale = 1;
-          defaultSettings.smoothness = 1;
-          defaultSettings.contrast = 46;
-          defaultSettings.midtones = 20;
-          defaultSettings.highlights = 72;
-          defaultSettings.luminanceThreshold = 8;
+          defaultSettings.smoothness = 5;
+          defaultSettings.contrast = 0;
+          defaultSettings.midtones = 65;
+          defaultSettings.highlights = 100;
+          defaultSettings.luminanceThreshold = 50;
           defaultSettings.blur = 0;
-          defaultSettings.invertShape = 0;
+          defaultSettings.invert = false;
+          defaultSettings.invertShape = 100; // Invertir forma al 100% por defecto en ASCII
         }
         
         return defaultSettings;
@@ -209,12 +250,88 @@ function App() {
   // New handler for custom color toggle
   const handleUseCustomColorsToggle = useCallback(() => {
     setUseCustomColors(prev => !prev);
-  }, []);
+    // Si se activa custom colors, desactivar original colors
+    if (!useCustomColors) {
+      setUseOriginalColors(false);
+    }
+  }, [useCustomColors]);
+
+  // New handler for original color toggle
+  const handleUseOriginalColorsToggle = useCallback(() => {
+    setUseOriginalColors(prev => !prev);
+    // Si se activa original colors, desactivar custom colors
+    if (!useOriginalColors) {
+      setUseCustomColors(false);
+    }
+  }, [useOriginalColors]);
 
   // New handler to set the custom neon color
   const setCustomNeonColor = useCallback((newColor) => {
     setCustomNeonColors(newColor);
   }, []);
+
+  // 3D Model handlers
+  const handle3DFileUpload = useCallback((event) => {
+    const file = event.target.files[0]
+    if (!file) return
+    const name = file.name.toLowerCase()
+    if (name.endsWith('.gltf')) {
+      // Limitamos a .glb para evitar dependencias externas rotas
+      alert('Actualmente solo se soportan archivos .glb. Convierta su GLTF a GLB.')
+      return
+    }
+    if (name.endsWith('.glb')) {
+      // Revocar URL previa si existía
+      if (modelBlobUrlRef.current) {
+        try { URL.revokeObjectURL(modelBlobUrlRef.current) } catch (_) {}
+      }
+      const url = URL.createObjectURL(file)
+      modelBlobUrlRef.current = url
+      setModelUrl(url)
+      setIs3DMode(true)
+      setImage(null) // Clear 2D image when loading 3D model
+    }
+  }, [])
+
+  const handleRotationChange = useCallback((newRotation) => {
+    setModelRotation(newRotation)
+  }, [])
+
+  const handleRotationStart = useCallback(() => {
+    setIsRotating(true)
+  }, [])
+
+  const handleRotationEnd = useCallback(() => {
+    setIsRotating(false)
+  }, [])
+
+  const handle3DImageDataUpdate = useCallback((imageData) => {
+    setModel3DImageData(imageData)
+    // Update canvas size based on 3D render
+    if (imageData) {
+      setCanvasSize({ width: imageData.width, height: imageData.height })
+    }
+  }, [])
+
+  const switchTo2DMode = useCallback(() => {
+    setIs3DMode(false)
+    // Revocar URL del modelo si existe
+    if (modelBlobUrlRef.current) {
+      try { URL.revokeObjectURL(modelBlobUrlRef.current) } catch (_) {}
+      modelBlobUrlRef.current = null
+    }
+    setModelUrl(null)
+    setModel3DImageData(null)
+    // Restore default image if available
+    if (!image) {
+      const img = new window.Image();
+      img.onload = () => {
+        setImage(img);
+        setCanvasSize({ width: img.width, height: img.height });
+      };
+      img.src = '/neaCat.png';
+    }
+  }, [image])
 
   const handleZoomIn = useCallback(() => {
     setZoom(prev => Math.min(prev * 1.2, 5))
@@ -485,13 +602,20 @@ function App() {
               settings={settings}
               onSettingsChange={handleSettingsChange}
               onImageLoad={handleImageLoad}
+              on3DFileUpload={handle3DFileUpload}
               onExport={handleExport}
-              hasImage={!!image}
+              hasImage={!!image || !!modelUrl}
               useCustomColors={useCustomColors}
               onUseCustomColorsToggle={handleUseCustomColorsToggle}
+              useOriginalColors={useOriginalColors}
+              onUseOriginalColorsToggle={handleUseOriginalColorsToggle}
               customNeonColors={customNeonColors}
-               setCustomNeonColor={setCustomNeonColors}
+              setCustomNeonColor={setCustomNeonColors}
               setShowExportPopup={setShowExportPopup}
+              is3DMode={is3DMode}
+              switchTo2DMode={switchTo2DMode}
+              modelRotation={modelRotation}
+              onRotationChange={handleRotationChange}
             />
           </div>
         </div>
@@ -544,13 +668,20 @@ function App() {
                 settings={settings}
                 onSettingsChange={handleSettingsChange}
                 onImageLoad={handleImageLoad}
+                on3DFileUpload={handle3DFileUpload}
                 onExport={handleExport}
-                hasImage={!!image}
+                hasImage={!!image || !!modelUrl}
                 useCustomColors={useCustomColors}
                 onUseCustomColorsToggle={handleUseCustomColorsToggle}
+                useOriginalColors={useOriginalColors}
+                onUseOriginalColorsToggle={handleUseOriginalColorsToggle}
                 customNeonColors={customNeonColors}
                 setCustomNeonColor={setCustomNeonColors}
                 setShowExportPopup={setShowExportPopup}
+                is3DMode={is3DMode}
+                switchTo2DMode={switchTo2DMode}
+                modelRotation={modelRotation}
+                onRotationChange={handleRotationChange}
               />
             </div>
           </div>
@@ -566,9 +697,11 @@ function App() {
           marginRight: !isMobile && !menuMinimized ? '320px' : 0
         }}
       >
+        {/* Siempre mostrar CanvasPreview para la vista filtrada */}
         <CanvasPreview
           ref={canvasRef}
-          image={image}
+          image={is3DMode ? null : image}
+          imageData={is3DMode ? model3DImageData : null}
           settings={settings}
           zoom={zoom}
           onZoomIn={handleZoomIn}
@@ -576,11 +709,44 @@ function App() {
           onResetZoom={handleResetZoom}
           canvasSize={canvasSize}
           useCustomColors={useCustomColors}
+          useOriginalColors={useOriginalColors}
           customNeonColors={customNeonColors}
           offset={offset}
           setOffset={setOffset}
           invert={settings.invert}
+          is3DMode={is3DMode}
+          on3DRotate={(dx, dy) => {
+            // Rotar el modelo como lo hacían los botones ocultos
+            // Invertimos vertical: arrastrar hacia arriba -> rota hacia arriba
+            const sensitivity = 0.01
+            setModelRotation(prev => ({
+              x: prev.x + dy * sensitivity,
+              y: prev.y + dx * sensitivity,
+              z: prev.z
+            }))
+          }}
+          on3DPan={(dx, dy) => {
+            controlsApiRef.current?.orbitPan(dx, dy)
+          }}
+          on3DRotateStart={() => { setIsRotating(true) }}
+          on3DRotateEnd={() => { setIsRotating(false) }}
         />
+        
+        {/* Model3DViewer oculto para capturar frames cuando está en modo 3D */}
+        {is3DMode && (
+          <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: '800px', height: '600px' }}>
+            <Model3DViewer
+              modelUrl={modelUrl}
+              rotation={modelRotation}
+              positionOffset={modelPositionOffset}
+              onRotationChange={setIsRotating}
+              onImageDataUpdate={handle3DImageDataUpdate}
+              isRotating={isRotating}
+              size={{ width: '800px', height: '600px' }}
+              registerControlsApi={(api) => { controlsApiRef.current = api }}
+            />
+          </div>
+        )}
         {/* Isla flotante de controles de zoom/reset en desktop y mobile con menú cerrado (ahora a la izquierda o derecha) */}
         {(!isMobile || (isMobile && !isMobileMenuOpen)) && (
           <div className={`flex fixed bottom-6 ${isMobile ? 'right-6' : 'left-6'} z-50 flex-row items-center p-2 space-x-2 bg-white rounded-none border border-black shadow-none`}>

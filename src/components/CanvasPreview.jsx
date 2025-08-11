@@ -190,6 +190,7 @@ function getAsciiFontColor({ useCustomColors, customNeonColors, invert, opacity 
 
 const CanvasPreview = forwardRef(({
   image,
+  imageData,
   settings,
   zoom,
   canvasSize,
@@ -197,7 +198,13 @@ const CanvasPreview = forwardRef(({
   customNeonColors,
   offset,
   setOffset,
-  invert
+  invert,
+  // 3D gesture control
+  is3DMode = false,
+  on3DRotate,
+  on3DPan,
+  on3DRotateStart,
+  on3DRotateEnd
 }, ref) => {
   const canvasRef = useRef(null)
   const containerRef = useRef(null)
@@ -205,6 +212,7 @@ const CanvasPreview = forwardRef(({
   // Estado para pan
   const isPanning = useRef(false)
   const lastPos = useRef({ x: 0, y: 0 })
+  const dragButton = useRef(0)
 
   // ✅ Expose canvas DOM to parent
   useImperativeHandle(ref, () => canvasRef.current)
@@ -221,67 +229,108 @@ const CanvasPreview = forwardRef(({
   const charSize = N;
 
   React.useEffect(() => {
-    if (!image) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    canvas.width = image.width;
-    canvas.height = image.height;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(image, 0, 0);
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    
+    let currentImageData;
+    
+    // Handle 3D model imageData or regular image
+    if (imageData) {
+      // Use imageData from 3D model
+      canvas.width = imageData.width;
+      canvas.height = imageData.height;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.putImageData(imageData, 0, 0);
+      currentImageData = imageData;
+    } else if (image) {
+      // Use regular image
+      canvas.width = image.width;
+      canvas.height = image.height;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(image, 0, 0);
+      currentImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    } else {
+      return;
+    }
 
     if (debouncedSettings.style === 'ASCII') {
       setAsciiHTML(null);
-      // Procesar la imagen base según los sliders antes de pasar a ASCII
-      const canvas = document.createElement('canvas');
-      canvas.width = image.width;
-      canvas.height = image.height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(image, 0, 0);
-      let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      // Invertir colores si invertShape > 0
-      if (debouncedSettings.invertShape > 0) {
-        const data = imageData.data;
-        const amount = debouncedSettings.invertShape / 100;
-        for (let i = 0; i < data.length; i += 4) {
-          data[i] = data[i] + (255 - 2 * data[i]) * amount; // Red
-          data[i + 1] = data[i + 1] + (255 - 2 * data[i + 1]) * amount; // Green
-          data[i + 2] = data[i + 2] + (255 - 2 * data[i + 2]) * amount; // Blue
-        }
+      
+      // Validar que currentImageData sea válido
+      if (!currentImageData || !currentImageData.data || currentImageData.width <= 0 || currentImageData.height <= 0) {
+        console.warn('Invalid imageData for ASCII processing');
+        return;
       }
-      // PREPROCESAMIENTO: blur + smoothness
-      const preprocessedImageData = preprocessImageForAscii(imageData, {
-        blur: debouncedSettings.blur,
-        smoothness: debouncedSettings.smoothness,
-        highlights: debouncedSettings.highlights,
-        luminanceThreshold: debouncedSettings.luminanceThreshold
-      });
-      // Determinar color personalizado si useCustomColors está activo
-      const asciiColor = getAsciiFontColor({
-        useCustomColors: debouncedSettings.useCustomColors,
-        customNeonColors: debouncedSettings.customNeonColors,
-        invert: debouncedSettings.invert,
-        opacity: (debouncedSettings.useCustomColors && debouncedSettings.customNeonColors && typeof debouncedSettings.customNeonColors.a === 'number')
-          ? debouncedSettings.customNeonColors.a
-          : 1
-      });
-      const columns = Math.floor(image.width / N);
-      const rows = Math.floor(image.height / N);
-      imageDataToAsciiHTML(preprocessedImageData, {
-        width: columns,
-        height: rows,
-        contrast: 1 + debouncedSettings.contrast / 100,
-        brightness: debouncedSettings.midtones / 50 - 1,
-        colored: false,
-        fontSize: charSize,
-        fontFamily: 'monospace',
-        lineHeight: 0.6,
-        background: debouncedSettings.invert ? '#fff' : '#000',
-        color: asciiColor,
-      })
-        .then(html => setAsciiHTML(html))
-        .catch(() => setAsciiHTML('<pre style="color:red">Error generando ASCII</pre>'));
+      
+      try {
+        // Procesar la imagen base según los sliders antes de pasar a ASCII
+        const canvas = document.createElement('canvas');
+        canvas.width = currentImageData.width;
+        canvas.height = currentImageData.height;
+        const ctx = canvas.getContext('2d');
+        
+        ctx.putImageData(currentImageData, 0, 0);
+        let processedImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        
+        // Validar que processedImageData sea válido
+        if (!processedImageData || !processedImageData.data) {
+          console.warn('Failed to create processedImageData for ASCII');
+          return;
+        }
+        
+        // Invertir colores si invertShape > 0
+        if (debouncedSettings.invertShape > 0) {
+          const data = processedImageData.data;
+          const amount = debouncedSettings.invertShape / 100;
+          for (let i = 0; i < data.length; i += 4) {
+            data[i] = data[i] + (255 - 2 * data[i]) * amount; // Red
+            data[i + 1] = data[i + 1] + (255 - 2 * data[i + 1]) * amount; // Green
+            data[i + 2] = data[i + 2] + (255 - 2 * data[i + 2]) * amount; // Blue
+          }
+        }
+        
+        // PREPROCESAMIENTO: blur + smoothness
+        const preprocessedImageData = preprocessImageForAscii(processedImageData, {
+          blur: debouncedSettings.blur,
+          smoothness: debouncedSettings.smoothness,
+          highlights: debouncedSettings.highlights,
+          luminanceThreshold: debouncedSettings.luminanceThreshold
+        });
+        
+        // Determinar color personalizado si useCustomColors está activo
+        const asciiColor = getAsciiFontColor({
+          useCustomColors: debouncedSettings.useCustomColors,
+          customNeonColors: debouncedSettings.customNeonColors,
+          invert: debouncedSettings.invert,
+          opacity: (debouncedSettings.useCustomColors && debouncedSettings.customNeonColors && typeof debouncedSettings.customNeonColors.a === 'number')
+            ? debouncedSettings.customNeonColors.a
+            : 1
+        });
+        
+        // Usar las dimensiones del processedImageData que ya sabemos que es válido
+        const columns = Math.floor(processedImageData.width / N);
+        const rows = Math.floor(processedImageData.height / N);
+        
+        imageDataToAsciiHTML(preprocessedImageData, {
+          width: columns,
+          height: rows,
+          contrast: 1 + debouncedSettings.contrast / 100,
+          brightness: debouncedSettings.midtones / 50 - 1,
+          colored: false,
+          fontSize: charSize,
+          fontFamily: 'monospace',
+          lineHeight: 0.6,
+          background: debouncedSettings.invert ? '#fff' : '#000',
+          color: asciiColor,
+        })
+          .then(html => setAsciiHTML(html))
+          .catch(() => setAsciiHTML('<pre style="color:red">Error generando ASCII</pre>'));
+          
+      } catch (error) {
+        console.error('Error processing ASCII filter:', error);
+        setAsciiHTML('<pre style="color:red">Error procesando filtro ASCII</pre>');
+      }
       return;
     } else {
       setAsciiHTML(null); // Limpiar arte ASCII al cambiar de filtro
@@ -290,20 +339,20 @@ const CanvasPreview = forwardRef(({
     let processedImageData;
     switch (debouncedSettings.style) {
       case 'Gradient':
-        processedImageData = applyGradient(imageData, debouncedSettings);
+        processedImageData = applyGradient(currentImageData, debouncedSettings);
         break;
       case 'Atkinson':
-        processedImageData = applyAtkinson(imageData, debouncedSettings)
+        processedImageData = applyAtkinson(currentImageData, debouncedSettings)
         break
       case 'Smooth Diffuse':
-        processedImageData = applySmoothDiffuse(imageData, debouncedSettings)
+        processedImageData = applySmoothDiffuse(currentImageData, debouncedSettings)
         break
       case 'Stippling':
-        processedImageData = applyStippling(imageData, debouncedSettings)
+        processedImageData = applyStippling(currentImageData, debouncedSettings)
         break
       case 'Floyd-Steinberg':
       default:
-        processedImageData = applyFloydSteinberg(imageData, debouncedSettings)
+        processedImageData = applyFloydSteinberg(currentImageData, debouncedSettings)
         break
     }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -313,7 +362,7 @@ const CanvasPreview = forwardRef(({
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
     ctx.putImageData(processedImageData, 0, 0);
-  }, [image, settings, useCustomColors, customNeonColors])
+  }, [image, imageData, settings, useCustomColors, customNeonColors])
 
   React.useEffect(() => {
     console.log('asciiHTML actualizado:', asciiHTML);
@@ -324,35 +373,60 @@ const CanvasPreview = forwardRef(({
     setAsciiHTML(null);
   }, [image]);
 
-  // Recalcular arte ASCII inmediatamente al cambiar cualquier slider relevante
+  // Recalculate ASCII art when relevant settings or image data changes
   React.useEffect(() => {
-    if (debouncedSettings.style === 'ASCII' && image) {
+    if (debouncedSettings.style === 'ASCII' && (image || imageData)) {
       setAsciiHTML(null);
-      // Procesar la imagen base según los sliders antes de pasar a ASCII
-      const canvas = document.createElement('canvas');
-      canvas.width = image.width;
-      canvas.height = image.height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(image, 0, 0);
-      let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      // Invertir colores si invertShape > 0
-      if (debouncedSettings.invertShape > 0) {
-        const data = imageData.data;
-        const amount = debouncedSettings.invertShape / 100;
-        for (let i = 0; i < data.length; i += 4) {
-          data[i] = data[i] + (255 - 2 * data[i]) * amount; // Red
-          data[i + 1] = data[i + 1] + (255 - 2 * data[i + 1]) * amount; // Green
-          data[i + 2] = data[i + 2] + (255 - 2 * data[i + 2]) * amount; // Blue
+      
+      // Process the base image according to settings before converting to ASCII
+      const processImage = () => {
+        const canvas = document.createElement('canvas');
+        let processedImageData;
+        
+        if (imageData) {
+          // Use 3D model imageData
+          canvas.width = imageData.width;
+          canvas.height = imageData.height;
+          const ctx = canvas.getContext('2d');
+          ctx.putImageData(imageData, 0, 0);
+          processedImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        } else if (image) {
+          // Use regular image
+          canvas.width = image.width;
+          canvas.height = image.height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(image, 0, 0);
+          processedImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        } else {
+          return null;
         }
-      }
-      // PREPROCESAMIENTO: blur + smoothness
-      const preprocessedImageData = preprocessImageForAscii(imageData, {
+
+        // Invert colors if invertShape > 0
+        if (debouncedSettings.invertShape > 0) {
+          const data = processedImageData.data;
+          const amount = debouncedSettings.invertShape / 100;
+          for (let i = 0; i < data.length; i += 4) {
+            data[i] = data[i] + (255 - 2 * data[i]) * amount; // Red
+            data[i + 1] = data[i + 1] + (255 - 2 * data[i + 1]) * amount; // Green
+            data[i + 2] = data[i + 2] + (255 - 2 * data[i + 2]) * amount; // Blue
+          }
+        }
+
+        return processedImageData;
+      };
+
+      const processedImageData = processImage();
+      if (!processedImageData) return;
+
+      // Preprocess image with blur, smoothness, highlights, etc.
+      const preprocessedImageData = preprocessImageForAscii(processedImageData, {
         blur: debouncedSettings.blur,
         smoothness: debouncedSettings.smoothness,
         highlights: debouncedSettings.highlights,
         luminanceThreshold: debouncedSettings.luminanceThreshold
       });
-      // Determinar color personalizado si useCustomColors está activo
+
+      // Get ASCII color based on settings
       const asciiColor = getAsciiFontColor({
         useCustomColors: debouncedSettings.useCustomColors,
         customNeonColors: debouncedSettings.customNeonColors,
@@ -361,8 +435,12 @@ const CanvasPreview = forwardRef(({
           ? debouncedSettings.customNeonColors.a
           : 1
       });
-      const columns = Math.floor(image.width / N);
-      const rows = Math.floor(image.height / N);
+
+      // Calculate dimensions for ASCII art
+      const columns = Math.floor(processedImageData.width / N);
+      const rows = Math.floor(processedImageData.height / N);
+
+      // Generate ASCII art
       imageDataToAsciiHTML(preprocessedImageData, {
         width: columns,
         height: rows,
@@ -376,25 +454,69 @@ const CanvasPreview = forwardRef(({
         color: asciiColor,
       })
         .then(html => setAsciiHTML(html))
-        .catch(() => setAsciiHTML('<pre style="color:red">Error generando ASCII</pre>'));
+        .catch((error) => {
+          console.error('Error generating ASCII:', error);
+          setAsciiHTML('<pre style="color:red">Error generando ASCII</pre>');
+        });
     }
-  }, [image, debouncedSettings.style, N, charSize, debouncedSettings.contrast, debouncedSettings.midtones, debouncedSettings.invert, debouncedSettings.scale, debouncedSettings.invertShape, debouncedSettings.useCustomColors, debouncedSettings.customNeonColors, debouncedSettings.blur, debouncedSettings.smoothness, debouncedSettings.highlights, debouncedSettings.luminanceThreshold]);
+  }, [
+    image, 
+    imageData,
+    debouncedSettings.style,
+    debouncedSettings.contrast,
+    debouncedSettings.midtones,
+    debouncedSettings.invert,
+    debouncedSettings.invertShape,
+    debouncedSettings.useCustomColors,
+    debouncedSettings.customNeonColors,
+    debouncedSettings.blur,
+    debouncedSettings.smoothness,
+    debouncedSettings.highlights,
+    debouncedSettings.luminanceThreshold,
+    N,
+    charSize,
+    preprocessImageForAscii,
+    getAsciiFontColor,
+    imageDataToAsciiHTML
+  ]);
 
   // Pan: Mouse events
   const handleMouseDown = (e) => {
+    // Botón izquierdo: rotar (3D) / pan (2D)
+    // Botón derecho: pan 3D
     isPanning.current = true
+    dragButton.current = e.button
     lastPos.current = { x: e.clientX, y: e.clientY }
+    if (is3DMode && e.button === 0) {
+      on3DRotateStart && on3DRotateStart()
+    }
+    // Logs
     document.body.style.cursor = 'grabbing'
   }
   const handleMouseMove = (e) => {
     if (!isPanning.current) return
     const dx = e.clientX - lastPos.current.x
     const dy = e.clientY - lastPos.current.y
-    setOffset(prev => ({ x: prev.x + dx, y: prev.y + dy }))
+    if (is3DMode) {
+      if (dragButton.current === 0) {
+        // rotación 3D
+        on3DRotate && on3DRotate(dx, dy)
+      } else if (dragButton.current === 2) {
+        // pan 3D
+        on3DPan && on3DPan(dx, dy)
+      }
+    } else {
+      // Pan 2D del lienzo
+      setOffset(prev => ({ x: prev.x + dx, y: prev.y + dy }))
+    }
     lastPos.current = { x: e.clientX, y: e.clientY }
   }
   const handleMouseUp = () => {
     isPanning.current = false
+    if (is3DMode && dragButton.current === 0) {
+      on3DRotateEnd && on3DRotateEnd()
+    }
+    try { console.log('[CanvasPreview] mouseup') } catch (_) {}
     document.body.style.cursor = ''
   }
 
@@ -415,19 +537,7 @@ const CanvasPreview = forwardRef(({
     isPanning.current = false
   }
 
-  // Limpiar listeners al desmontar
-  React.useEffect(() => {
-    window.addEventListener('mousemove', handleMouseMove)
-    window.addEventListener('mouseup', handleMouseUp)
-    window.addEventListener('touchmove', handleTouchMove)
-    window.addEventListener('touchend', handleTouchEnd)
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove)
-      window.removeEventListener('mouseup', handleMouseUp)
-      window.removeEventListener('touchmove', handleTouchMove)
-      window.removeEventListener('touchend', handleTouchEnd)
-    }
-  })
+  // Eliminamos listeners globales para evitar dobles eventos y cierres obsoletos.
 
   const handleDragOver = (e) => {
     e.preventDefault()
@@ -447,7 +557,14 @@ const CanvasPreview = forwardRef(({
   // Renderizado simple: solo mostrar el arte ASCII generado
   return (
     <div className="flex flex-col w-full h-full" style={{height: '100%'}}>
-      <div className="flex flex-1 justify-center items-center w-full h-full canvas-container">
+      <div
+        className="flex flex-1 justify-center items-center w-full h-full canvas-container"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onContextMenu={(e) => e.preventDefault()}
+      >
         {(debouncedSettings.style === 'ASCII' && asciiHTML) ? (
           <div
             className="ascii-art-preview"

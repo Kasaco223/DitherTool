@@ -71,14 +71,21 @@ const ControlPanel = ({
   settings,
   onSettingsChange,
   onImageLoad,
+  on3DFileUpload,
   onExport,
   hasImage,
   useCustomColors,
   onUseCustomColorsToggle,
+  useOriginalColors,
+  onUseOriginalColorsToggle,
   customNeonColors,
   setCustomNeonColor,
   setShowExportPopup,
-  onMinimizeMenu
+  onMinimizeMenu,
+  is3DMode,
+  switchTo2DMode,
+  modelRotation,
+  onRotationChange
 }) => {
   const fileInputRef = useRef(null)
 
@@ -154,10 +161,19 @@ const ControlPanel = ({
     }
   }
 
-  const handleFileSelect = (e) => {
-    const file = e.target.files[0]
-    if (file && file.type.startsWith('image/')) {
-      onImageLoad(file)
+  const handleUnifiedFileSelect = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      if (file.type && file.type.startsWith('image/')) {
+        onImageLoad?.(file)
+      } else if (file.name?.toLowerCase().endsWith('.glb') || file.name?.toLowerCase().endsWith('.gltf')) {
+        // Adaptar a la API existente que espera event
+        on3DFileUpload?.({ target: { files: [file] } })
+      }
+    } finally {
+      // Permitir re-seleccionar el mismo archivo
+      e.target.value = ''
     }
   }
 
@@ -213,17 +229,31 @@ const ControlPanel = ({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
-            onChange={handleFileSelect}
+            accept="image/*,.glb,.gltf"
+            onChange={handleUnifiedFileSelect}
             className="hidden"
           />
           <button
             onClick={handleImportClick}
             className="flex-1 h-12 px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm uppercase tracking-wider border border-black hover:bg-black hover:text-white transition-all duration-300 rounded-none flex items-center justify-center"
           >
-            Import Image
+            Import
           </button>
         </div>
+        
+        {/* Mode Switch Button */}
+        {is3DMode && (
+          <div className="flex flex-row gap-3 items-center mb-2 w-full">
+            <button
+              onClick={switchTo2DMode}
+              className="flex-1 h-10 px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm uppercase tracking-wider border border-gray-400 text-gray-600 hover:bg-gray-100 transition-all duration-300 rounded-none flex items-center justify-center"
+            >
+              Switch to 2D Mode
+            </button>
+          </div>
+        )}
+        
+        {/* 3D Rotation Controls - ocultos (control por gestos) */}
       </div>
       {/*<button
         onClick={() => setShowExportPopup(true)}
@@ -454,6 +484,18 @@ const ControlPanel = ({
         </div>
         {/* --- BLOQUE CUSTOM COLORS ABAJO --- */}
         <div className="mt-1">
+          {/* <div className="flex items-center space-x-3 mb-2">
+            <input
+              type="checkbox"
+              id="useOriginalColors"
+              checked={useOriginalColors}
+              onChange={onUseOriginalColorsToggle}
+              className="w-4 h-4 rounded-none border-gray-200 focus:ring-black focus:ring-offset-0"
+            />
+            <label htmlFor="useOriginalColors" className="text-xs font-medium tracking-wide uppercase md:text-sm">
+              Original Color
+            </label>
+          </div> */}
           <div className="flex items-center space-x-3">
             <input
               type="checkbox"
@@ -556,9 +598,12 @@ const ControlPanel = ({
         onClick={() => {
           onSettingsChange(DEFAULT_SETTINGS);
           safeSetCustomNeonColor(DEFAULT_CUSTOM_NEON_COLORS);
-          // Forzar que useCustomColors se apague
+          // Forzar que useCustomColors y useOriginalColors se apaguen
           if (useCustomColors) {
             onUseCustomColorsToggle();
+          }
+          if (useOriginalColors) {
+            onUseOriginalColorsToggle();
           }
         }}
         className="w-full px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm uppercase tracking-wider border border-black text-black bg-white hover:bg-gray-100 mt-8"

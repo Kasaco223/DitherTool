@@ -12,6 +12,7 @@ export function applyFloydSteinberg(imageData, settings) {
     invert,
     invertShape = 0,
     useCustomColors,
+    useOriginalColors = false,
     customNeonColors
   } = settings
 
@@ -34,6 +35,9 @@ export function applyFloydSteinberg(imageData, settings) {
       // Fallback to a default neon color if custom colors are enabled but invalid
       activeNeonColor = { h: 300, s: 100, v: 100 }; // Default to Magenta Neón
     }
+  } else if (useOriginalColors) {
+    // Use original colors from the image
+    activeNeonColor = 'original';
   }
 
   // Apply scale by resizing the processing area
@@ -205,7 +209,13 @@ export function applyFloydSteinberg(imageData, settings) {
       if (isParticle) {
         let r, g, b;
 
-        if (activeNeonColor) {
+        if (activeNeonColor === 'original') {
+          // Use original colors from the image
+          const originalIdx = i * 4;
+          r = originalRgbForHue[originalIdx];
+          g = originalRgbForHue[originalIdx + 1];
+          b = originalRgbForHue[originalIdx + 2];
+        } else if (activeNeonColor) {
           [r, g, b] = hsvToRgb(activeNeonColor.h, activeNeonColor.s, activeNeonColor.v);
           // Si el color es blanco puro, lo manejo como 255,255,254
           if (r === 255 && g === 255 && b === 255) {
@@ -268,7 +278,13 @@ export function applyFloydSteinberg(imageData, settings) {
       if (isParticle) {
         let r, g, b;
 
-        if (activeNeonColor) {
+        if (activeNeonColor === 'original') {
+          // Use original colors from the image
+          const originalIdx = i * 4;
+          r = originalRgbForHue[originalIdx];
+          g = originalRgbForHue[originalIdx + 1];
+          b = originalRgbForHue[originalIdx + 2];
+        } else if (activeNeonColor) {
           [r, g, b] = hsvToRgb(activeNeonColor.h, activeNeonColor.s, activeNeonColor.v);
           // Si el color es blanco puro, lo manejo como 255,255,254
           if (r === 255 && g === 255 && b === 255) {
