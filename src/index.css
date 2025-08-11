@@ -130,3 +130,22 @@ h1, h2, h3 {
 button, input, select, textarea, h1, h2, h3, h4, h5, h6, p, span, label, div {
   font-family: 'BehanceCustom', 'Inter', system-ui, sans-serif !important;
 }
+
+/* Evitar selección de texto en el arte ASCII del preview */
+.ascii-art-preview {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Fuerza no-selección en cualquier hijo que inyecte aalib (pre/div/span) */
+.ascii-art-preview *,
+.ascii-art-preview pre,
+.ascii-art-preview span,
+.ascii-art-preview div {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+}

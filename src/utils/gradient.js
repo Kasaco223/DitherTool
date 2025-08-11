@@ -237,6 +237,53 @@ export function applyGradient(imageData, settings) {
       // Coordenada Y en el espacio virtual
       const yVirtual = Math.floor(y / zoom);
       if (yVirtual < yStartVirtual || yVirtual >= yEndVirtual) continue;
+
+      // Detección de filas sin detalle (curvatura baja en todo el ancho)
+      let hasDetail = false;
+      for (let x = 1; x < width - 1; x++) {
+        const a = processed[y * width + (x - 1)];
+        const b = processed[y * width + x];
+        const c = processed[y * width + (x + 1)];
+        const curvature = Math.abs(c - 2 * b + a);
+        if (curvature > 12) { hasDetail = true; break; }
+      }
+
+      // Conteo de transiciones (cruces con el umbral) a lo largo de la fila
+      let transitions = 0;
+      let prevInside = processed[y * width] < threshold;
+      for (let x = 1; x < width; x++) {
+        const insideX = processed[y * width + x] < threshold;
+        if (insideX !== prevInside) {
+          transitions++;
+          prevInside = insideX;
+        }
+      }
+
+      // Criterio de transparencia: filas sin detalle o con <= 1 transición
+      if (!hasDetail || transitions <= 1) {
+        for (let x = 0; x < width; x++) {
+          const idxAlpha = (y * width + x) * 4 + 3;
+          newData[idxAlpha] = 0;
+        }
+        continue;
+      }
+
+      // Si toda la fila cae en el mismo estado (todo < threshold o todo >= threshold)
+      // hacemos transparente la fila completa para que se vea el fondo.
+      let firstInside = processed[y * width] < threshold;
+      let isUniformRow = true;
+      for (let x = 1; x < width; x++) {
+        const insideX = processed[y * width + x] < threshold;
+        if (insideX !== firstInside) { isUniformRow = false; break; }
+      }
+      if (isUniformRow) {
+        for (let x = 0; x < width; x++) {
+          const idxAlpha = (y * width + x) * 4 + 3;
+          newData[idxAlpha] = 0;
+        }
+        continue;
+      }
+
       let inSegment = false;
       let segStart = 0;
       for (let x = 0; x <= width; x++) {

@@ -55,9 +55,10 @@ function App() {
   })
 
   // New state for custom colors (single color)
-  const [useCustomColors, setUseCustomColors] = useState(false);
+  // Encendido por defecto en #fefefe opaco para todos los filtros
+  const [useCustomColors, setUseCustomColors] = useState(true);
   const [useOriginalColors, setUseOriginalColors] = useState(false);
-  const [customNeonColors, setCustomNeonColors] = useState({ h: 300, s: 100, v: 100 }); // Magenta Neón por defecto
+  const [customNeonColors, setCustomNeonColors] = useState({ h: 0, s: 0, v: 100, a: 1 });
 
   const [offset, setOffset] = useState({ x: 0, y: 0 });
 
@@ -212,6 +213,13 @@ function App() {
           defaultSettings.highlights = 100;
           defaultSettings.luminanceThreshold = 46;
           defaultSettings.invertShape = 0;
+          // Color específico para Gradient: negro
+          defaultSettings.gradientColor = { h: 0, s: 0, v: 0, a: 1 };
+          // Forzar color negro para Gradient
+          setCustomNeonColors({ h: 0, s: 0, v: 0, a: 1 });
+        } else {
+          // Para todos los demás filtros, mantener color blanco
+          setCustomNeonColors({ h: 0, s: 0, v: 100, a: 1 });
         }
         
         // Valores específicos para ASCII en modo 3D
@@ -239,6 +247,10 @@ function App() {
           defaultSettings.invert = false;
           defaultSettings.invertShape = 100; // Invertir forma al 100% por defecto en ASCII
         }
+        
+        // Forzar que useCustomColors se mantenga activo en todos los filtros
+        defaultSettings.useCustomColors = true;
+        defaultSettings.useOriginalColors = false;
         
         return defaultSettings;
       }
